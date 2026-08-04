@@ -257,7 +257,7 @@ function collapseSubtree() {
             <span
               v-if="!hasChildren || !expanded"
               class="text-muted-foreground"
-            >{{ closeBracket }}</span>
+            >{{ closeBracket }}<template v-if="!isLast && depth > 0">,</template></span>
           </template>
 
           <span
@@ -280,12 +280,8 @@ function collapseSubtree() {
               >{{ part.text }}</mark>
               <template v-else>{{ part.text }}</template>
             </template>
+            <span v-if="!isLast && depth > 0" class="text-muted-foreground">,</span>
           </span>
-
-          <span
-            v-if="!isLast && depth > 0 && (!isContainer || !hasChildren || !expanded)"
-            class="text-muted-foreground"
-          >,</span>
         </div>
       </ContextMenuTrigger>
 

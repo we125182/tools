@@ -86,6 +86,32 @@ describe('JsonNode', () => {
     expect(nestedNode.find('div.font-mono.text-muted-foreground').text()).toBe('},')
   })
 
+  it('keeps primitive value commas within the wrapping text container', () => {
+    const pinia = createPinia()
+    const wrapper = mount(JsonNode, {
+      props: {
+        value: 'a long value that may wrap in a narrow panel',
+        keyName: 'message',
+        segments: ['message'],
+        depth: 1,
+        isLast: false,
+      },
+      global: {
+        plugins: [pinia],
+        stubs: {
+          ContextMenu: { template: '<div><slot /></div>' },
+          ContextMenuTrigger: { template: '<div><slot /></div>' },
+          ContextMenuContent: true,
+        },
+      },
+    })
+
+    const value = wrapper.find('.break-all')
+
+    expect(value.text()).toBe('"a long value that may wrap in a narrow panel",')
+    expect(value.find('span.text-muted-foreground').text()).toBe(',')
+  })
+
   it('sorts object keys without changing array index order', async () => {
     const pinia = createPinia()
     const store = useJsonStore(pinia)
