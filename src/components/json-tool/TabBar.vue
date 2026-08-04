@@ -62,16 +62,16 @@ function commitRename() {
         </template>
       </div>
 
+      <button
+        type="button"
+        class="flex h-8 w-full shrink-0 items-center justify-center gap-1 rounded-md text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+        title="新建空白 Tab"
+        aria-label="新建空白 Tab"
+        @click="store.addTab"
+      >
+        <Plus class="size-4" />
+        新建标签
+      </button>
     </div>
-
-    <button
-      type="button"
-      class="mt-2 flex size-7 items-center justify-center self-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-      title="新建空白 Tab"
-      aria-label="新建空白 Tab"
-      @click="store.addTab"
-    >
-      <Plus class="size-4" />
-    </button>
   </div>
 </template>

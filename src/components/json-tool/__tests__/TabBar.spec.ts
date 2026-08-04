@@ -15,7 +15,13 @@ describe('TabBar', () => {
       global: { plugins: [pinia] },
     })
 
-    await wrapper.get('button[aria-label="新建空白 Tab"]').trigger('click')
+    const addButton = wrapper.get('button[aria-label="新建空白 Tab"]')
+    const tab = wrapper.get('.group')
+
+    expect(addButton.classes()).toContain('w-full')
+    expect(tab.element.nextElementSibling).toBe(addButton.element)
+
+    await addButton.trigger('click')
 
     expect(wrapper.text()).not.toContain('复制当前 Tab')
     expect(store.tabs).toHaveLength(2)
