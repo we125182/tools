@@ -58,6 +58,34 @@ describe('JsonNode', () => {
     expect(wrapper.text()).not.toContain('data:{{')
   })
 
+  it('renders a comma after an expanded container closing bracket only', () => {
+    const pinia = createPinia()
+    const store = useJsonStore(pinia)
+    store.sortMode = 'default'
+
+    const wrapper = mount(JsonNode, {
+      props: {
+        value: { nested: { value: 1 }, sibling: 2 },
+        segments: [],
+        depth: 0,
+        isLast: true,
+      },
+      global: {
+        plugins: [pinia],
+        stubs: {
+          ContextMenu: { template: '<div><slot /></div>' },
+          ContextMenuTrigger: { template: '<div><slot /></div>' },
+          ContextMenuContent: true,
+        },
+      },
+    })
+
+    const nestedNode = wrapper.find('[data-node-key="$.nested"]')
+
+    expect(nestedNode.find('.group').text()).toBe('nested:{')
+    expect(nestedNode.find('div.font-mono.text-muted-foreground').text()).toBe('},')
+  })
+
   it('sorts object keys without changing array index order', async () => {
     const pinia = createPinia()
     const store = useJsonStore(pinia)

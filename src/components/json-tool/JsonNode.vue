@@ -282,7 +282,10 @@ function collapseSubtree() {
             </template>
           </span>
 
-          <span v-if="!isLast && depth > 0" class="text-muted-foreground">,</span>
+          <span
+            v-if="!isLast && depth > 0 && (!isContainer || !hasChildren || !expanded)"
+            class="text-muted-foreground"
+          >,</span>
         </div>
       </ContextMenuTrigger>
 
