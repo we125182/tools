@@ -104,14 +104,49 @@ function displayValue(): string {
   }
 }
 
+interface TextPart {
+  text: string
+  isMatch: boolean
+}
+
+function highlightText(text: string): TextPart[] {
+  const query = store.query.trim()
+  if (!query) return [{ text, isMatch: false }]
+
+  const lowerText = text.toLowerCase()
+  const lowerQuery = query.toLowerCase()
+  const parts: TextPart[] = []
+  let start = 0
+  let matchIndex = lowerText.indexOf(lowerQuery, start)
+
+  while (matchIndex !== -1) {
+    if (matchIndex > start) {
+      parts.push({ text: text.slice(start, matchIndex), isMatch: false })
+    }
+    parts.push({
+      text: text.slice(matchIndex, matchIndex + query.length),
+      isMatch: true,
+    })
+    start = matchIndex + query.length
+    matchIndex = lowerText.indexOf(lowerQuery, start)
+  }
+
+  if (start < text.length) {
+    parts.push({ text: text.slice(start), isMatch: false })
+  }
+
+  return parts.length > 0 ? parts : [{ text, isMatch: false }]
+}
+
 const indentStyle = computed(() => ({
   paddingLeft: `${props.depth * 16 + 4}px`,
 }))
 
 // ---------- 右键菜单：复制 ----------
 async function copyPath() {
-  await copy(nodeKey.value)
-  toast({ title: '已复制属性路径', description: nodeKey.value })
+  const path = nodeKey.value.replace(/^\$\./, '')
+  await copy(path)
+  toast({ title: '已复制属性路径', description: path })
 }
 
 async function copyValue() {
@@ -174,7 +209,6 @@ function collapseSubtree() {
           class="group flex cursor-default items-baseline gap-1 rounded-sm px-1 py-px font-mono text-[13px] leading-5 hover:bg-accent/50"
           :class="{
             'ring-2 ring-primary/70 ring-inset rounded': isCurrentMatch,
-            'bg-primary/10': isMatch && !isCurrentMatch,
           }"
           :style="indentStyle"
           @click="toggle"
@@ -190,7 +224,17 @@ function collapseSubtree() {
           </span>
 
           <span v-if="keyName !== undefined" class="text-json-key">
-            {{ keyName }}<span class="text-muted-foreground">:</span>
+            <template
+              v-for="(part, index) in highlightText(String(keyName))"
+              :key="index"
+            >
+              <mark
+                v-if="part.isMatch"
+                class="rounded-sm bg-amber-200 px-px text-inherit dark:bg-amber-500/40"
+              >{{ part.text }}</mark>
+              <template v-else>{{ part.text }}</template>
+            </template>
+            <span class="text-muted-foreground">:</span>
           </span>
 
           <template v-if="isContainer">
@@ -212,7 +256,18 @@ function collapseSubtree() {
               'text-json-boolean': nodeType === 'boolean',
               'text-json-null italic': nodeType === 'null',
             }"
-          >{{ displayValue() }}</span>
+          >
+            <template
+              v-for="(part, index) in highlightText(displayValue())"
+              :key="index"
+            >
+              <mark
+                v-if="part.isMatch"
+                class="rounded-sm bg-amber-200 px-px text-inherit dark:bg-amber-500/40"
+              >{{ part.text }}</mark>
+              <template v-else>{{ part.text }}</template>
+            </template>
+          </span>
 
           <span v-if="!isLast && depth > 0" class="text-muted-foreground">,</span>
         </div>

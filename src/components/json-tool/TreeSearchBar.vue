@@ -1,14 +1,9 @@
 <script setup lang="ts">
 import { ChevronsDownUp, ChevronsUpDown, Search, X, ChevronUp, ChevronDown } from 'lucide-vue-next'
-import type { AcceptableValue } from 'reka-ui'
 import { useJsonStore } from '@/stores/json'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import {
-  ToggleGroup,
-  ToggleGroupItem,
-} from '@/components/ui/toggle-group'
 import {
   Tooltip,
   TooltipContent,
@@ -18,31 +13,25 @@ import { Separator } from '@/components/ui/separator'
 
 const store = useJsonStore()
 
-function onModeChange(val: AcceptableValue | AcceptableValue[]) {
-  if (val === 'value' || val === 'path') store.searchMode = val
+function toggleAll() {
+  if (store.hasExpandedNodes) store.collapseAll()
+  else store.expandAll()
 }
 </script>
 
 <template>
   <div class="flex flex-wrap items-center gap-2 p-2">
-    <div class="flex items-center gap-1.5">
-      <Button
-        variant="outline"
-        size="sm"
-        :disabled="!store.parsed"
-        @click="store.expandAll"
-      >
-        <ChevronsUpDown class="size-4" /> 展开全部
-      </Button>
-      <Button
-        variant="outline"
-        size="sm"
-        :disabled="!store.parsed"
-        @click="store.collapseAll"
-      >
-        <ChevronsDownUp class="size-4" /> 收起全部
-      </Button>
-    </div>
+    <Button
+      variant="outline"
+      size="sm"
+      :aria-label="store.hasExpandedNodes ? '收起全部' : '展开全部'"
+      :disabled="!store.parsed"
+      @click="toggleAll"
+    >
+      <ChevronsDownUp v-if="store.hasExpandedNodes" class="size-4" />
+      <ChevronsUpDown v-else class="size-4" />
+      {{ store.hasExpandedNodes ? '收起全部' : '展开全部' }}
+    </Button>
 
     <Separator orientation="vertical" class="h-6" />
 
@@ -52,7 +41,7 @@ function onModeChange(val: AcceptableValue | AcceptableValue[]) {
         <Search class="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           v-model="store.query"
-          placeholder="搜索值或键…"
+          placeholder="搜索文本…"
           class="h-8 pl-8 pr-16"
           :disabled="!store.parsed"
         />
@@ -64,15 +53,6 @@ function onModeChange(val: AcceptableValue | AcceptableValue[]) {
           <X class="size-3.5" />
         </button>
       </div>
-
-      <ToggleGroup
-        type="single"
-        :model-value="store.searchMode"
-        @update:model-value="onModeChange"
-      >
-        <ToggleGroupItem value="value" class="h-8 px-2 text-xs">值</ToggleGroupItem>
-        <ToggleGroupItem value="path" class="h-8 px-2 text-xs">键路径</ToggleGroupItem>
-      </ToggleGroup>
     </div>
 
     <!-- 计数与导航 -->
