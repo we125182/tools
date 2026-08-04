@@ -58,6 +58,49 @@ function toggleAll() {
       {{ store.hasExpandedNodes ? '收起全部' : '展开全部' }}
     </Button>
 
+    <DropdownMenu>
+      <DropdownMenuTrigger as-child>
+        <Button
+          variant="outline"
+          size="icon"
+          class="size-8"
+          :aria-label="sortLabel"
+          :disabled="!store.parsed"
+        >
+          <ArrowDownAZ v-if="store.sortMode === 'asc'" class="size-4" />
+          <ArrowDownZA v-else-if="store.sortMode === 'desc'" class="size-4" />
+          <ArrowDownUp v-else class="size-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start">
+        <DropdownMenuLabel>键名排序</DropdownMenuLabel>
+        <DropdownMenuItem @select="store.sortMode = 'default'">
+          <ArrowDownUp class="size-4" />
+          默认
+          <Check
+            class="ml-auto size-4"
+            :class="store.sortMode === 'default' ? 'opacity-100' : 'opacity-0'"
+          />
+        </DropdownMenuItem>
+        <DropdownMenuItem @select="store.sortMode = 'asc'">
+          <ArrowDownAZ class="size-4" />
+          升序
+          <Check
+            class="ml-auto size-4"
+            :class="store.sortMode === 'asc' ? 'opacity-100' : 'opacity-0'"
+          />
+        </DropdownMenuItem>
+        <DropdownMenuItem @select="store.sortMode = 'desc'">
+          <ArrowDownZA class="size-4" />
+          倒序
+          <Check
+            class="ml-auto size-4"
+            :class="store.sortMode === 'desc' ? 'opacity-100' : 'opacity-0'"
+          />
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+
     <Separator orientation="vertical" class="h-6" />
 
     <!-- 搜索 -->
@@ -118,52 +161,5 @@ function toggleAll() {
       </Tooltip>
     </div>
 
-    <DropdownMenu>
-      <Tooltip>
-        <TooltipTrigger as-child>
-          <DropdownMenuTrigger as-child>
-            <Button
-              variant="outline"
-              size="icon"
-              class="size-8"
-              :aria-label="sortLabel"
-              :disabled="!store.parsed"
-            >
-              <ArrowDownAZ v-if="store.sortMode === 'asc'" class="size-4" />
-              <ArrowDownZA v-else-if="store.sortMode === 'desc'" class="size-4" />
-              <ArrowDownUp v-else class="size-4" />
-            </Button>
-          </DropdownMenuTrigger>
-        </TooltipTrigger>
-        <TooltipContent>{{ sortLabel }}</TooltipContent>
-      </Tooltip>
-      <DropdownMenuContent align="end">
-        <DropdownMenuLabel>键名排序</DropdownMenuLabel>
-        <DropdownMenuItem @select="store.sortMode = 'default'">
-          <ArrowDownUp class="size-4" />
-          默认
-          <Check
-            class="ml-auto size-4"
-            :class="store.sortMode === 'default' ? 'opacity-100' : 'opacity-0'"
-          />
-        </DropdownMenuItem>
-        <DropdownMenuItem @select="store.sortMode = 'asc'">
-          <ArrowDownAZ class="size-4" />
-          升序
-          <Check
-            class="ml-auto size-4"
-            :class="store.sortMode === 'asc' ? 'opacity-100' : 'opacity-0'"
-          />
-        </DropdownMenuItem>
-        <DropdownMenuItem @select="store.sortMode = 'desc'">
-          <ArrowDownZA class="size-4" />
-          倒序
-          <Check
-            class="ml-auto size-4"
-            :class="store.sortMode === 'desc' ? 'opacity-100' : 'opacity-0'"
-          />
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
   </div>
 </template>
