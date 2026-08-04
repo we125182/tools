@@ -23,14 +23,16 @@ describe('validate', () => {
     expect(errors[0]?.message).toBeTruthy()
   })
 
-  it('严格模式：不允许注释', () => {
-    const { errors } = validate('{"a":1 // 注释\n}')
-    expect(errors.length).toBeGreaterThan(0)
+  it('支持带注释和尾随逗号的 JavaScript 对象', () => {
+    const { value, errors } = validate("{ name: 'Codex', // 名称\n items: [1, 2,], }")
+    expect(errors).toHaveLength(0)
+    expect(value).toEqual({ name: 'Codex', items: [1, 2] })
   })
 
-  it('严格模式：不允许尾随逗号', () => {
-    const { errors } = validate('{"a":1,}')
-    expect(errors.length).toBeGreaterThan(0)
+  it('支持 JavaScript 数组字面量', () => {
+    const { value, errors } = validate("[{ id: 1, title: 'JSON Tools' }, true]")
+    expect(errors).toHaveLength(0)
+    expect(value).toEqual([{ id: 1, title: 'JSON Tools' }, true])
   })
 
   it('空对象合法', () => {

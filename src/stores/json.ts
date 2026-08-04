@@ -16,8 +16,6 @@ export interface Tab {
   input: string
 }
 
-export type SearchMode = 'value' | 'path'
-
 export interface SearchResult {
   segments: PathSegment[]
 }
@@ -67,7 +65,6 @@ export const useJsonStore = defineStore('json', () => {
 
   // ---------- 搜索 ----------
   const query = ref('')
-  const searchMode = ref<SearchMode>('value')
   const results = ref<SearchResult[]>([])
   const matchIndex = ref(0)
   const matchCount = computed(() => results.value.length)
@@ -82,6 +79,28 @@ export const useJsonStore = defineStore('json', () => {
     if (explicit !== undefined) return explicit
     return depth < defaultExpandDepth.value
   }
+
+  const hasExpandedNodes = computed(() => {
+    let hasExpanded = false
+
+    const visit = (value: unknown, segments: PathSegment[], depth: number) => {
+      const children = Array.isArray(value)
+        ? value.map((item, index) => [index, item] as const)
+        : value && typeof value === 'object'
+          ? Object.entries(value)
+          : []
+
+      if (children.length === 0 || !isExpanded(segments, depth)) return
+
+      hasExpanded = true
+      for (const [key, child] of children) {
+        visit(child, [...segments, key], depth + 1)
+      }
+    }
+
+    visit(parsed.value, [], 0)
+    return hasExpanded
+  })
 
   function setExpanded(segments: PathSegment[], expanded: boolean) {
     expandMap.set(pathKey(segments), expanded)
@@ -124,14 +143,23 @@ export const useJsonStore = defineStore('json', () => {
 
   // ---------- Tab 操作 ----------
   function setActive(id: string) {
-    if (tabs.value.some((t) => t.id === id)) activeId.value = id
+    if (id === activeId.value || !tabs.value.some((t) => t.id === id)) return
+
+    activeId.value = id
+    clearSearch()
+
+    if (activeInput.value.trim()) {
+      format()
+    } else {
+      resetParsedState()
+    }
   }
 
   function addTab() {
     const n = tabs.value.length + 1
     const tab: Tab = { id: uid(), name: `Tab ${n}`, input: '' }
     tabs.value.push(tab)
-    activeId.value = tab.id
+    setActive(tab.id)
   }
 
   function closeTab(id: string) {
@@ -142,8 +170,9 @@ export const useJsonStore = defineStore('json', () => {
       const fresh: Tab = { id: uid(), name: 'Tab 1', input: '' }
       tabs.value.push(fresh)
       activeId.value = fresh.id
+      resetParsedState()
     } else if (activeId.value === id) {
-      activeId.value = tabs.value[Math.max(0, idx - 1)]!.id
+      setActive(tabs.value[Math.max(0, idx - 1)]!.id)
     }
   }
 
@@ -153,7 +182,7 @@ export const useJsonStore = defineStore('json', () => {
     const idx = tabs.value.findIndex((t) => t.id === id)
     const copy: Tab = { id: uid(), name: `${src.name} copy`, input: src.input }
     tabs.value.splice(idx + 1, 0, copy)
-    activeId.value = copy.id
+    setActive(copy.id)
   }
 
   function renameTab(id: string, name: string) {
@@ -175,15 +204,11 @@ export const useJsonStore = defineStore('json', () => {
     hasParsed.value = true
   }
 
-  /**
-   * 校验 + 格式化：解析成功则把缩进规范后的文本写回输入框并生成树；
-   * 解析失败则记录错误、不修改输入框。
-   */
-  function format() {
+  function formatWithIndent(indent: number) {
     const { value, errors: errs } = validate(activeInput.value)
     errors.value = errs
     if (errs.length === 0) {
-      const beautified = beautify(value, Number(indentSize.value))
+      const beautified = beautify(value, indent)
       activeInput.value = beautified
       parsed.value = markRaw(JSON.parse(beautified) as object)
       nodeCount.value = estimateNodeCount(JSON.parse(beautified) as object)
@@ -196,14 +221,28 @@ export const useJsonStore = defineStore('json', () => {
     }
   }
 
+  /** 解析成功后以选定缩进格式化；失败时保留输入并展示错误。 */
+  function format() {
+    formatWithIndent(Number(indentSize.value))
+  }
+
+  /** 解析成功后压缩为单行规范 JSON。 */
+  function compress() {
+    formatWithIndent(0)
+  }
+
   function clearInput() {
     activeInput.value = ''
+    resetParsedState()
+    clearSearch()
+  }
+
+  function resetParsedState() {
     parsed.value = null
     errors.value = []
     hasParsed.value = false
     nodeCount.value = 0
     resetExpand()
-    clearSearch()
   }
 
   function resetExpand() {
@@ -221,25 +260,17 @@ export const useJsonStore = defineStore('json', () => {
     const ancestors = new Set<string>()
 
     const visit = (value: unknown, segments: PathSegment[]) => {
-      // 路径匹配：检查最后一段 key/索引
-      if (searchMode.value === 'path') {
-        const last = segments[segments.length - 1]
-        if (last !== undefined && String(last).toLowerCase().includes(q)) {
-          found.push({ segments })
-          for (let i = 1; i < segments.length; i++) {
-            ancestors.add(pathKey(segments.slice(0, i)))
-          }
-        }
-      } else if (
+      const key = segments[segments.length - 1]
+      const matchesKey = key !== undefined && String(key).toLowerCase().includes(q)
+      const matchesValue =
         value !== null &&
-        typeof value !== 'object'
-      ) {
-        // 值匹配：仅原始值
-        if (String(value).toLowerCase().includes(q)) {
-          found.push({ segments })
-          for (let i = 1; i < segments.length; i++) {
-            ancestors.add(pathKey(segments.slice(0, i)))
-          }
+        typeof value !== 'object' &&
+        String(value).toLowerCase().includes(q)
+
+      if (matchesKey || matchesValue) {
+        found.push({ segments })
+        for (let i = 1; i < segments.length; i++) {
+          ancestors.add(pathKey(segments.slice(0, i)))
         }
       }
 
@@ -256,8 +287,7 @@ export const useJsonStore = defineStore('json', () => {
     results.value = found
     matchIndex.value = found.length ? 0 : -1
 
-    // 自动展开命中节点的所有祖先
-    expandMap.clear()
+    // 保留用户现有的展开状态，并额外展开命中节点的祖先。
     if (!isLargeData.value) {
       for (const key of ancestors) expandMap.set(key, true)
     } else {
@@ -293,8 +323,8 @@ export const useJsonStore = defineStore('json', () => {
     return r ? pathKey(r.segments) : null
   }
 
-  // query / mode 变化时自动重新搜索（节流由组件层做防抖）
-  watch([query, searchMode], () => {
+  // query 变化时自动重新搜索（节流由组件层做防抖）
+  watch(query, () => {
     if (parsed.value !== null) runSearch()
   })
 
@@ -317,10 +347,12 @@ export const useJsonStore = defineStore('json', () => {
     isLargeData,
     reparse,
     format,
+    compress,
     clearInput,
     // expand
     expandMap,
     defaultExpandDepth,
+    hasExpandedNodes,
     baseDefaultDepth,
     isExpanded,
     setExpanded,
@@ -333,7 +365,6 @@ export const useJsonStore = defineStore('json', () => {
     indentSize,
     // search
     query,
-    searchMode,
     results,
     matchIndex,
     matchCount,

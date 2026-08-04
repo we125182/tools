@@ -1,4 +1,5 @@
 import { parse, printParseErrorCode, type ParseError } from 'jsonc-parser'
+import JSON5 from 'json5'
 
 /** JSON 路径段：对象属性名为 string，数组下标为 number */
 export type PathSegment = string | number
@@ -21,12 +22,20 @@ const PARSE_OPTIONS = {
 }
 
 /**
- * 用 jsonc-parser 校验并解析文本。
- * 严格 JSON 模式：不允许注释与尾随逗号，符合「是否为合法 JSON」语义。
+ * 优先按严格 JSON 解析；失败后尝试 JSON5，以支持 JavaScript 对象和数组字面量。
+ * JSON5 仅解析数据，不会执行输入中的 JavaScript 代码。
  */
 export function validate(text: string): ValidateResult {
   const rawErrors: ParseError[] = []
   const value = parse(text, rawErrors, PARSE_OPTIONS)
+  if (rawErrors.length === 0) return { value, errors: [] }
+
+  try {
+    return { value: JSON5.parse(text), errors: [] }
+  } catch {
+    // 保留严格 JSON 的诊断信息，确保错误定位与现有界面保持一致。
+  }
+
   const errors: JsonError[] = rawErrors.map((e) => ({
     ...offsetToLineCol(text, e.offset),
     message: printParseErrorCode(e.error),
