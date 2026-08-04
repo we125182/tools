@@ -1,13 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useJsonStore } from '@/stores/json'
-import { Plus, Copy, X } from 'lucide-vue-next'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+import { Plus, X } from 'lucide-vue-next'
 
 const store = useJsonStore()
 
@@ -32,7 +26,7 @@ function commitRename() {
       <div
         v-for="tab in store.tabs"
         :key="tab.id"
-        class="group flex h-8 shrink-0 items-center gap-1 rounded-t-md border border-b-0 px-2.5 text-xs transition-colors"
+        class="group flex h-8 shrink-0 cursor-default items-center gap-1 rounded-t-md border border-b-0 px-2.5 text-xs transition-colors select-none"
         :class="
           store.activeId === tab.id
             ? 'bg-background text-foreground'
@@ -52,7 +46,7 @@ function commitRename() {
         </template>
         <template v-else>
           <span
-            class="max-w-[8rem] truncate"
+            class="max-w-[8rem] cursor-default truncate"
             @dblclick.stop="startRename(tab.id, tab.name)"
           >
             {{ tab.name }}
@@ -68,25 +62,15 @@ function commitRename() {
         </template>
       </div>
 
-      <!-- 新建 / 复制 -->
-      <DropdownMenu>
-        <DropdownMenuTrigger as-child>
-          <button
-            class="mb-0.5 flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-            title="新建 / 复制 Tab"
-          >
-            <Plus class="size-4" />
-          </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start">
-          <DropdownMenuItem @select="store.addTab">
-            <Plus class="size-4" /> 新建空白 Tab
-          </DropdownMenuItem>
-          <DropdownMenuItem @select="store.duplicateTab(store.activeId)">
-            <Copy class="size-4" /> 复制当前 Tab
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <button
+        type="button"
+        class="mb-0.5 flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+        title="新建空白 Tab"
+        aria-label="新建空白 Tab"
+        @click="store.addTab"
+      >
+        <Plus class="size-4" />
+      </button>
     </div>
 
     <span class="mb-1 px-1 text-[10px] text-muted-foreground">
