@@ -105,17 +105,15 @@ export function isContainer(value: unknown): boolean {
   return typeOf(value) === 'object' || typeOf(value) === 'array'
 }
 
-/** 折叠时的摘要文本：{ ...3 keys } / [ ...5 items ] */
+/** 折叠时的摘要文本：…3 keys / …5 items */
 export function summary(value: unknown): string {
   if (Array.isArray(value)) {
     const n = value.length
-    if (n === 0) return '[]'
-    return `[ …${n} ${n === 1 ? 'item' : 'items'} ]`
+    return `…${n} ${n === 1 ? 'item' : 'items'}`
   }
   if (value && typeof value === 'object') {
     const n = Object.keys(value).length
-    if (n === 0) return '{}'
-    return `{ …${n} ${n === 1 ? 'key' : 'keys'} }`
+    return `…${n} ${n === 1 ? 'key' : 'keys'}`
   }
   return ''
 }

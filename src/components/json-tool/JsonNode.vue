@@ -240,11 +240,15 @@ function collapseSubtree() {
           <template v-if="isContainer">
             <span class="text-muted-foreground">{{ openBracket }}</span>
             <span
-              v-if="!hasChildren || !expanded"
+              v-if="hasChildren && !expanded"
               class="ml-0.5 text-[12px] text-muted-foreground/70"
             >
-              {{ hasChildren ? `${summary(value)} ${closeBracket}` : closeBracket }}
+              {{ summary(value) }}
             </span>
+            <span
+              v-if="!hasChildren || !expanded"
+              class="text-muted-foreground"
+            >{{ closeBracket }}</span>
           </template>
 
           <span

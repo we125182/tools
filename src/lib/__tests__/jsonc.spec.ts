@@ -92,10 +92,10 @@ describe('typeOf / isContainer / summary / estimateNodeCount', () => {
     expect(isContainer('x')).toBe(false)
   })
   it('summary 文本正确', () => {
-    expect(summary({ a: 1, b: 2, c: 3 })).toBe('{ …3 keys }')
-    expect(summary([1, 2, 3, 4, 5])).toBe('[ …5 items ]')
-    expect(summary([])).toBe('[]')
-    expect(summary({})).toBe('{}')
+    expect(summary({ a: 1, b: 2, c: 3 })).toBe('…3 keys')
+    expect(summary([1, 2, 3, 4, 5])).toBe('…5 items')
+    expect(summary([])).toBe('…0 items')
+    expect(summary({})).toBe('…0 keys')
   })
   it('estimateNodeCount 统计所有节点', () => {
     // { a: [1, 2] } => object(1) + array(1) + 1(1) + 2(1) = 4

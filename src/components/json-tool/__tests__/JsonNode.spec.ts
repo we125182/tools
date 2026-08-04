@@ -32,4 +32,28 @@ describe('JsonNode', () => {
 
     expect(wrapper.findAll('mark').map((mark) => mark.text())).toEqual(['sta', 'sta'])
   })
+
+  it('renders collapsed container summaries without nested brackets', () => {
+    const pinia = createPinia()
+    const wrapper = mount(JsonNode, {
+      props: {
+        value: { first: 1, second: 2 },
+        keyName: 'data',
+        segments: ['data'],
+        depth: 2,
+        isLast: true,
+      },
+      global: {
+        plugins: [pinia],
+        stubs: {
+          ContextMenu: { template: '<div><slot /></div>' },
+          ContextMenuTrigger: { template: '<div><slot /></div>' },
+          ContextMenuContent: true,
+        },
+      },
+    })
+
+    expect(wrapper.text()).toContain('data:{…2 keys}')
+    expect(wrapper.text()).not.toContain('data:{{')
+  })
 })
