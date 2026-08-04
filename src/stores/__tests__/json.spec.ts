@@ -1,3 +1,4 @@
+import { nextTick } from 'vue'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { useJsonStore } from '../json'
@@ -86,15 +87,20 @@ describe('JSON tree expansion', () => {
     expect(store.parsed).toBeNull()
   })
 
-  it('restores the target tab search and sort state on tab switch', () => {
+  it('restores the saved search and sort state after switching tabs', async () => {
     const store = useJsonStore()
     store.tabs = [
       { id: 't1', name: 'Tab 1', input: '{"current":true}', query: 'current', sortMode: 'asc' },
       { id: 't2', name: 'Tab 2', input: "{ name: 'Codex', items: [1, 2,], }", query: 'codex', sortMode: 'desc' },
     ]
     store.activeId = 't1'
+    store.query = 'current'
+    store.sortMode = 'asc'
+    store.query = 'updated search'
+    store.sortMode = 'default'
 
     store.setActive('t2')
+    await nextTick()
 
     expect(store.activeId).toBe('t2')
     expect(store.activeInput).toBe('{\n  "name": "Codex",\n  "items": [\n    1,\n    2\n  ]\n}')
@@ -104,10 +110,12 @@ describe('JSON tree expansion', () => {
     expect(store.matchCount).toBe(1)
 
     store.setActive('t1')
+    await nextTick()
 
-    expect(store.query).toBe('current')
-    expect(store.sortMode).toBe('asc')
-    expect(store.matchCount).toBe(1)
+    expect(store.query).toBe('updated search')
+    expect(store.sortMode).toBe('default')
+    expect(store.tabs.find((tab) => tab.id === 't1')?.query).toBe('updated search')
+    expect(store.matchCount).toBe(0)
   })
 
   it('clears the preview when switching to a blank tab', () => {

@@ -68,18 +68,9 @@ export const useJsonStore = defineStore('json', () => {
       activeTab.value.input = v
     },
   })
-  const query = computed({
-    get: () => activeTab.value.query,
-    set: (v: string) => {
-      activeTab.value.query = v
-    },
-  })
-  const sortMode = computed<SortMode>({
-    get: () => activeTab.value.sortMode,
-    set: (v) => {
-      activeTab.value.sortMode = v
-    },
-  })
+  const query = ref(activeTab.value.query)
+  const sortMode = ref<SortMode>(activeTab.value.sortMode)
+  let restoringTabViewState = false
 
   // ---------- 解析结果 ----------
   // markRaw + shallowRef：避免 Vue 深度响应化大型 JSON 导致卡顿
@@ -182,7 +173,9 @@ export const useJsonStore = defineStore('json', () => {
   function setActive(id: string) {
     if (id === activeId.value || !tabs.value.some((t) => t.id === id)) return
 
+    saveActiveViewState()
     activeId.value = id
+    restoreActiveViewState()
     resetSearchResults()
 
     if (activeInput.value.trim()) {
@@ -207,6 +200,7 @@ export const useJsonStore = defineStore('json', () => {
       const fresh = createTab(uid(), 'Tab 1')
       tabs.value.push(fresh)
       activeId.value = fresh.id
+      restoreActiveViewState()
       resetParsedState()
     } else if (activeId.value === id) {
       setActive(tabs.value[Math.max(0, idx - 1)]!.id)
@@ -225,6 +219,18 @@ export const useJsonStore = defineStore('json', () => {
   function renameTab(id: string, name: string) {
     const t = tabs.value.find((x) => x.id === id)
     if (t) t.name = name
+  }
+
+  function saveActiveViewState() {
+    activeTab.value.query = query.value
+    activeTab.value.sortMode = sortMode.value
+  }
+
+  function restoreActiveViewState() {
+    restoringTabViewState = true
+    query.value = activeTab.value.query
+    sortMode.value = activeTab.value.sortMode
+    restoringTabViewState = false
   }
 
   // ---------- 解析 / 格式化 ----------
@@ -367,6 +373,15 @@ export const useJsonStore = defineStore('json', () => {
     const r = results.value[matchIndex.value]
     return r ? pathKey(r.segments) : null
   }
+
+  // 搜索与排序设置属于当前 Tab，修改后立即写入对应标签。
+  watch(
+    [query, sortMode],
+    () => {
+      if (!restoringTabViewState) saveActiveViewState()
+    },
+    { flush: 'sync' },
+  )
 
   // query 变化时自动重新搜索（节流由组件层做防抖）
   watch(query, () => {
