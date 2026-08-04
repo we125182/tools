@@ -23,6 +23,12 @@ describe('JSON tree expansion', () => {
     expect(store.hasExpandedNodes).toBe(false)
   })
 
+  it('defaults object key sorting to ascending order', () => {
+    const store = useJsonStore()
+
+    expect(store.sortMode).toBe('asc')
+  })
+
   it('compresses JavaScript object input to compact JSON', () => {
     const store = useJsonStore()
     store.activeInput = "{ name: 'Codex', tags: [1, 2,], }"

@@ -20,6 +20,8 @@ export interface SearchResult {
   segments: PathSegment[]
 }
 
+export type SortMode = 'default' | 'asc' | 'desc'
+
 const LARGE_NODE_THRESHOLD = 2000
 
 function uid(): string {
@@ -62,6 +64,7 @@ export const useJsonStore = defineStore('json', () => {
 
   // ---------- 工具态 ----------
   const indentSize = useStorage<'2' | '4'>('jt:indent', '2')
+  const sortMode = useStorage<SortMode>('jt:sort-mode', 'asc')
 
   // ---------- 搜索 ----------
   const query = ref('')
@@ -363,6 +366,7 @@ export const useJsonStore = defineStore('json', () => {
     resetExpand,
     // tool
     indentSize,
+    sortMode,
     // search
     query,
     results,

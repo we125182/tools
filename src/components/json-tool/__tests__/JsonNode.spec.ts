@@ -1,3 +1,4 @@
+import { nextTick } from 'vue'
 import { mount } from '@vue/test-utils'
 import { createPinia } from 'pinia'
 import { describe, expect, it } from 'vitest'
@@ -55,5 +56,57 @@ describe('JsonNode', () => {
 
     expect(wrapper.text()).toContain('data:{…2 keys}')
     expect(wrapper.text()).not.toContain('data:{{')
+  })
+
+  it('sorts object keys without changing array index order', async () => {
+    const pinia = createPinia()
+    const store = useJsonStore(pinia)
+    store.sortMode = 'asc'
+
+    const objectWrapper = mount(JsonNode, {
+      props: {
+        value: { zebra: 1, apple: 2 },
+        segments: [],
+        depth: 0,
+        isLast: true,
+      },
+      global: {
+        plugins: [pinia],
+        stubs: {
+          ContextMenu: { template: '<div><slot /></div>' },
+          ContextMenuTrigger: { template: '<div><slot /></div>' },
+          ContextMenuContent: true,
+        },
+      },
+    })
+
+    expect(objectWrapper.findAll('[data-node-key]').map((node) => node.attributes('data-node-key')))
+      .toEqual(['$', '$.apple', '$.zebra'])
+
+    store.sortMode = 'desc'
+    await nextTick()
+
+    expect(objectWrapper.findAll('[data-node-key]').map((node) => node.attributes('data-node-key')))
+      .toEqual(['$', '$.zebra', '$.apple'])
+
+    const arrayWrapper = mount(JsonNode, {
+      props: {
+        value: ['zebra', 'apple'],
+        segments: [],
+        depth: 0,
+        isLast: true,
+      },
+      global: {
+        plugins: [pinia],
+        stubs: {
+          ContextMenu: { template: '<div><slot /></div>' },
+          ContextMenuTrigger: { template: '<div><slot /></div>' },
+          ContextMenuContent: true,
+        },
+      },
+    })
+
+    expect(arrayWrapper.findAll('[data-node-key]').map((node) => node.attributes('data-node-key')))
+      .toEqual(['$', '$[0]', '$[1]'])
   })
 })

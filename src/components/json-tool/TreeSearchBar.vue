@@ -1,5 +1,17 @@
 <script setup lang="ts">
-import { ChevronsDownUp, ChevronsUpDown, Search, X, ChevronUp, ChevronDown } from 'lucide-vue-next'
+import { computed } from 'vue'
+import {
+  ArrowDownAZ,
+  ArrowDownUp,
+  ArrowDownZA,
+  Check,
+  ChevronsDownUp,
+  ChevronsUpDown,
+  ChevronDown,
+  ChevronUp,
+  Search,
+  X,
+} from 'lucide-vue-next'
 import { useJsonStore } from '@/stores/json'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -10,8 +22,21 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { Separator } from '@/components/ui/separator'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
 const store = useJsonStore()
+
+const sortLabel = computed(() => {
+  if (store.sortMode === 'asc') return '键名排序：升序'
+  if (store.sortMode === 'desc') return '键名排序：倒序'
+  return '键名排序：默认'
+})
 
 function toggleAll() {
   if (store.hasExpandedNodes) store.collapseAll()
@@ -92,5 +117,53 @@ function toggleAll() {
         <TooltipContent>下一个</TooltipContent>
       </Tooltip>
     </div>
+
+    <DropdownMenu>
+      <Tooltip>
+        <TooltipTrigger as-child>
+          <DropdownMenuTrigger as-child>
+            <Button
+              variant="outline"
+              size="icon"
+              class="size-8"
+              :aria-label="sortLabel"
+              :disabled="!store.parsed"
+            >
+              <ArrowDownAZ v-if="store.sortMode === 'asc'" class="size-4" />
+              <ArrowDownZA v-else-if="store.sortMode === 'desc'" class="size-4" />
+              <ArrowDownUp v-else class="size-4" />
+            </Button>
+          </DropdownMenuTrigger>
+        </TooltipTrigger>
+        <TooltipContent>{{ sortLabel }}</TooltipContent>
+      </Tooltip>
+      <DropdownMenuContent align="end">
+        <DropdownMenuLabel>键名排序</DropdownMenuLabel>
+        <DropdownMenuItem @select="store.sortMode = 'default'">
+          <ArrowDownUp class="size-4" />
+          默认
+          <Check
+            class="ml-auto size-4"
+            :class="store.sortMode === 'default' ? 'opacity-100' : 'opacity-0'"
+          />
+        </DropdownMenuItem>
+        <DropdownMenuItem @select="store.sortMode = 'asc'">
+          <ArrowDownAZ class="size-4" />
+          升序
+          <Check
+            class="ml-auto size-4"
+            :class="store.sortMode === 'asc' ? 'opacity-100' : 'opacity-0'"
+          />
+        </DropdownMenuItem>
+        <DropdownMenuItem @select="store.sortMode = 'desc'">
+          <ArrowDownZA class="size-4" />
+          倒序
+          <Check
+            class="ml-auto size-4"
+            :class="store.sortMode === 'desc' ? 'opacity-100' : 'opacity-0'"
+          />
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   </div>
 </template>

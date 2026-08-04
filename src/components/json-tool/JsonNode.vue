@@ -81,7 +81,16 @@ const entries = computed<Array<[string | number, unknown]>>(() => {
     return props.value.map((v, i) => [i, v])
   }
   if (props.value && typeof props.value === 'object') {
-    return Object.entries(props.value)
+    const objectEntries = Object.entries(props.value)
+    if (store.sortMode === 'default') return objectEntries
+
+    const direction = store.sortMode === 'asc' ? 1 : -1
+    return objectEntries.sort(([left], [right]) =>
+      direction * left.localeCompare(right, 'zh-Hans-CN', {
+        numeric: true,
+        sensitivity: 'base',
+      }),
+    )
   }
   return []
 })
