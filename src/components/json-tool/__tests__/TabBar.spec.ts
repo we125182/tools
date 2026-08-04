@@ -19,6 +19,8 @@ describe('TabBar', () => {
     const tab = wrapper.get('.group')
 
     expect(addButton.classes()).toContain('w-full')
+    expect(addButton.classes()).toContain('bg-accent')
+    expect(addButton.text()).toBe('')
     expect(tab.element.nextElementSibling).toBe(addButton.element)
 
     await addButton.trigger('click')

@@ -64,13 +64,12 @@ function commitRename() {
 
       <button
         type="button"
-        class="flex h-8 w-full shrink-0 items-center justify-center gap-1 rounded-md text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+        class="flex h-8 w-full shrink-0 items-center justify-center rounded-md bg-accent text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
         title="新建空白 Tab"
         aria-label="新建空白 Tab"
         @click="store.addTab"
       >
         <Plus class="size-4" />
-        新建标签
       </button>
     </div>
   </div>
