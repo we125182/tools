@@ -71,7 +71,7 @@ describe('JSON tree expansion', () => {
 
   it('adds and activates a blank tab', () => {
     const store = useJsonStore()
-    store.tabs = [{ id: 't1', name: 'Tab 1', input: '{"current":true}' }]
+    store.tabs = [{ id: 't1', name: 'Tab 1', input: '{"current":true}', query: '', sortMode: 'asc' }]
     store.activeId = 't1'
     store.parsed = { current: true }
     store.hasParsed = true
@@ -81,31 +81,40 @@ describe('JSON tree expansion', () => {
     expect(store.tabs).toHaveLength(2)
     expect(store.activeId).toBe(store.tabs[1]?.id)
     expect(store.activeInput).toBe('')
+    expect(store.query).toBe('')
+    expect(store.sortMode).toBe('asc')
     expect(store.parsed).toBeNull()
   })
 
-  it('formats the target tab and refreshes its parsed result on tab switch', () => {
+  it('restores the target tab search and sort state on tab switch', () => {
     const store = useJsonStore()
     store.tabs = [
-      { id: 't1', name: 'Tab 1', input: '{"current":true}' },
-      { id: 't2', name: 'Tab 2', input: "{ name: 'Codex', items: [1, 2,], }" },
+      { id: 't1', name: 'Tab 1', input: '{"current":true}', query: 'current', sortMode: 'asc' },
+      { id: 't2', name: 'Tab 2', input: "{ name: 'Codex', items: [1, 2,], }", query: 'codex', sortMode: 'desc' },
     ]
     store.activeId = 't1'
-    store.query = 'current'
 
     store.setActive('t2')
 
     expect(store.activeId).toBe('t2')
     expect(store.activeInput).toBe('{\n  "name": "Codex",\n  "items": [\n    1,\n    2\n  ]\n}')
     expect(store.parsed).toEqual({ name: 'Codex', items: [1, 2] })
-    expect(store.query).toBe('')
+    expect(store.query).toBe('codex')
+    expect(store.sortMode).toBe('desc')
+    expect(store.matchCount).toBe(1)
+
+    store.setActive('t1')
+
+    expect(store.query).toBe('current')
+    expect(store.sortMode).toBe('asc')
+    expect(store.matchCount).toBe(1)
   })
 
   it('clears the preview when switching to a blank tab', () => {
     const store = useJsonStore()
     store.tabs = [
-      { id: 't1', name: 'Tab 1', input: '{"current":true}' },
-      { id: 't2', name: 'Tab 2', input: '' },
+      { id: 't1', name: 'Tab 1', input: '{"current":true}', query: '', sortMode: 'asc' },
+      { id: 't2', name: 'Tab 2', input: '', query: 'saved search', sortMode: 'default' },
     ]
     store.activeId = 't1'
     store.parsed = { current: true }

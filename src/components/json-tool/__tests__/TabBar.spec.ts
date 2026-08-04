@@ -8,7 +8,7 @@ describe('TabBar', () => {
   it('creates and activates a blank tab from the add button', async () => {
     const pinia = createPinia()
     const store = useJsonStore(pinia)
-    store.tabs = [{ id: 't1', name: 'Tab 1', input: '{"current":true}' }]
+    store.tabs = [{ id: 't1', name: 'Tab 1', input: '{"current":true}', query: '', sortMode: 'asc' }]
     store.activeId = 't1'
 
     const wrapper = mount(TabBar, {

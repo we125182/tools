@@ -10,17 +10,19 @@ import {
   type PathSegment,
 } from '@/lib/jsonc'
 
+export type SortMode = 'default' | 'asc' | 'desc'
+
 export interface Tab {
   id: string
   name: string
   input: string
+  query: string
+  sortMode: SortMode
 }
 
 export interface SearchResult {
   segments: PathSegment[]
 }
-
-export type SortMode = 'default' | 'asc' | 'desc'
 
 const LARGE_NODE_THRESHOLD = 2000
 
@@ -28,12 +30,34 @@ function uid(): string {
   return 't' + Math.random().toString(36).slice(2, 10)
 }
 
+function createTab(id: string, name: string, input = ''): Tab {
+  return { id, name, input, query: '', sortMode: 'asc' }
+}
+
+function normalizeTab(tab: Partial<Tab>): Tab {
+  const sortMode: SortMode =
+    tab.sortMode === 'default' || tab.sortMode === 'asc' || tab.sortMode === 'desc'
+      ? tab.sortMode
+      : 'asc'
+
+  return {
+    id: tab.id ?? uid(),
+    name: tab.name ?? 'Tab',
+    input: tab.input ?? '',
+    query: tab.query ?? '',
+    sortMode,
+  }
+}
+
 export const useJsonStore = defineStore('json', () => {
   // ---------- 多 Tab ----------
   const tabs = useStorage<Tab[]>('jt:tabs', [
-    { id: 't1', name: 'Tab 1', input: '' },
+    createTab('t1', 'Tab 1'),
   ])
   const activeId = useStorage('jt:activeId', 't1')
+
+  // 为旧版本地存储补齐搜索与排序字段。
+  tabs.value = tabs.value.map((tab) => normalizeTab(tab))
 
   const activeTab = computed<Tab>(
     () => tabs.value.find((t) => t.id === activeId.value) ?? tabs.value[0]!,
@@ -42,6 +66,18 @@ export const useJsonStore = defineStore('json', () => {
     get: () => activeTab.value.input,
     set: (v: string) => {
       activeTab.value.input = v
+    },
+  })
+  const query = computed({
+    get: () => activeTab.value.query,
+    set: (v: string) => {
+      activeTab.value.query = v
+    },
+  })
+  const sortMode = computed<SortMode>({
+    get: () => activeTab.value.sortMode,
+    set: (v) => {
+      activeTab.value.sortMode = v
     },
   })
 
@@ -64,10 +100,8 @@ export const useJsonStore = defineStore('json', () => {
 
   // ---------- 工具态 ----------
   const indentSize = useStorage<'2' | '4'>('jt:indent', '2')
-  const sortMode = useStorage<SortMode>('jt:sort-mode', 'asc')
 
   // ---------- 搜索 ----------
-  const query = ref('')
   const results = ref<SearchResult[]>([])
   const matchIndex = ref(0)
   const matchCount = computed(() => results.value.length)
@@ -149,7 +183,7 @@ export const useJsonStore = defineStore('json', () => {
     if (id === activeId.value || !tabs.value.some((t) => t.id === id)) return
 
     activeId.value = id
-    clearSearch()
+    resetSearchResults()
 
     if (activeInput.value.trim()) {
       format()
@@ -160,7 +194,7 @@ export const useJsonStore = defineStore('json', () => {
 
   function addTab() {
     const n = tabs.value.length + 1
-    const tab: Tab = { id: uid(), name: `Tab ${n}`, input: '' }
+    const tab = createTab(uid(), `Tab ${n}`)
     tabs.value.push(tab)
     setActive(tab.id)
   }
@@ -170,7 +204,7 @@ export const useJsonStore = defineStore('json', () => {
     if (idx === -1) return
     tabs.value.splice(idx, 1)
     if (tabs.value.length === 0) {
-      const fresh: Tab = { id: uid(), name: 'Tab 1', input: '' }
+      const fresh = createTab(uid(), 'Tab 1')
       tabs.value.push(fresh)
       activeId.value = fresh.id
       resetParsedState()
@@ -183,7 +217,7 @@ export const useJsonStore = defineStore('json', () => {
     const src = tabs.value.find((t) => t.id === id)
     if (!src) return
     const idx = tabs.value.findIndex((t) => t.id === id)
-    const copy: Tab = { id: uid(), name: `${src.name} copy`, input: src.input }
+    const copy: Tab = { ...src, id: uid(), name: `${src.name} copy` }
     tabs.value.splice(idx + 1, 0, copy)
     setActive(copy.id)
   }
@@ -200,9 +234,11 @@ export const useJsonStore = defineStore('json', () => {
     if (errs.length === 0) {
       parsed.value = markRaw(value as object)
       nodeCount.value = estimateNodeCount(value as object)
+      if (query.value.trim()) runSearch()
     } else {
       parsed.value = null
       nodeCount.value = 0
+      resetSearchResults()
     }
     hasParsed.value = true
   }
@@ -216,10 +252,12 @@ export const useJsonStore = defineStore('json', () => {
       parsed.value = markRaw(JSON.parse(beautified) as object)
       nodeCount.value = estimateNodeCount(JSON.parse(beautified) as object)
       resetExpand()
+      if (query.value.trim()) runSearch()
       hasParsed.value = true
     } else {
       parsed.value = null
       nodeCount.value = 0
+      resetSearchResults()
       hasParsed.value = true
     }
   }
@@ -306,6 +344,10 @@ export const useJsonStore = defineStore('json', () => {
 
   function clearSearch() {
     query.value = ''
+    resetSearchResults()
+  }
+
+  function resetSearchResults() {
     results.value = []
     matchIndex.value = -1
   }
@@ -328,7 +370,11 @@ export const useJsonStore = defineStore('json', () => {
 
   // query 变化时自动重新搜索（节流由组件层做防抖）
   watch(query, () => {
-    if (parsed.value !== null) runSearch()
+    if (!query.value.trim()) {
+      resetSearchResults()
+    } else if (parsed.value !== null) {
+      runSearch()
+    }
   })
 
   return {

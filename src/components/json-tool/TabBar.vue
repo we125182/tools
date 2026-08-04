@@ -21,15 +21,15 @@ function commitRename() {
 </script>
 
 <template>
-  <div class="flex items-end gap-1 border-b bg-muted/30 px-2 pt-2">
-    <div class="flex flex-1 items-end gap-1 overflow-x-auto">
+  <div class="flex h-full w-32 shrink-0 flex-col border-r bg-muted/30 p-2">
+    <div class="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto">
       <div
         v-for="tab in store.tabs"
         :key="tab.id"
-        class="group flex h-8 shrink-0 cursor-default items-center gap-1 rounded-t-md border border-b-0 px-2.5 text-xs transition-colors select-none"
+        class="group flex h-8 min-w-0 shrink-0 cursor-default items-center gap-1 rounded-md border px-2 text-xs transition-colors select-none"
         :class="
           store.activeId === tab.id
-            ? 'bg-background text-foreground'
+            ? 'border-border bg-background text-foreground shadow-xs'
             : 'border-transparent bg-transparent text-muted-foreground hover:bg-background/60 hover:text-foreground'
         "
         @click="store.setActive(tab.id)"
@@ -37,7 +37,7 @@ function commitRename() {
         <template v-if="editingId === tab.id">
           <input
             v-model="editingName"
-            class="w-24 rounded border bg-background px-1 py-0.5 text-xs outline-none focus:border-ring"
+            class="min-w-0 flex-1 rounded border bg-background px-1 py-0.5 text-xs outline-none focus:border-ring"
             @click.stop
             @keyup.enter="commitRename"
             @keyup.esc="editingId = null"
@@ -46,7 +46,7 @@ function commitRename() {
         </template>
         <template v-else>
           <span
-            class="max-w-[8rem] cursor-default truncate"
+            class="min-w-0 flex-1 cursor-default truncate"
             @dblclick.stop="startRename(tab.id, tab.name)"
           >
             {{ tab.name }}
@@ -62,19 +62,16 @@ function commitRename() {
         </template>
       </div>
 
-      <button
-        type="button"
-        class="mb-0.5 flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-        title="新建空白 Tab"
-        aria-label="新建空白 Tab"
-        @click="store.addTab"
-      >
-        <Plus class="size-4" />
-      </button>
     </div>
 
-    <span class="mb-1 px-1 text-[10px] text-muted-foreground">
-      双击标签可重命名
-    </span>
+    <button
+      type="button"
+      class="mt-2 flex size-7 items-center justify-center self-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+      title="新建空白 Tab"
+      aria-label="新建空白 Tab"
+      @click="store.addTab"
+    >
+      <Plus class="size-4" />
+    </button>
   </div>
 </template>
