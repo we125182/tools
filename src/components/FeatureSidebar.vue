@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { Braces } from 'lucide-vue-next'
+import { ref } from 'vue'
+import { Braces, PanelLeftClose, PanelLeftOpen } from 'lucide-vue-next'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
 defineProps<{
   activeFeature: 'json-tools'
@@ -8,31 +10,59 @@ defineProps<{
 const emit = defineEmits<{
   'update:activeFeature': [feature: 'json-tools']
 }>()
+
+const isCollapsed = ref(false)
 </script>
 
 <template>
   <aside
     aria-label="功能列表"
-    class="flex h-full w-52 shrink-0 flex-col border-r bg-muted/30 p-2 max-md:w-14"
+    class="flex h-full shrink-0 flex-col border-r bg-muted/30 p-2 transition-[width] duration-200 ease-out"
+    :class="isCollapsed ? 'w-14' : 'w-52'"
   >
-    <div class="px-2 py-2 text-xs font-medium text-muted-foreground max-md:sr-only">工具</div>
+    <div class="flex h-8 shrink-0 items-center px-2">
+      <span v-if="!isCollapsed" class="text-xs font-medium text-muted-foreground">工具</span>
+
+      <Tooltip>
+        <TooltipTrigger as-child>
+          <button
+            type="button"
+            class="ml-auto flex size-6 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+            :aria-label="isCollapsed ? '展开功能导航' : '收起功能导航'"
+            @click="isCollapsed = !isCollapsed"
+          >
+            <PanelLeftOpen v-if="isCollapsed" class="size-4" />
+            <PanelLeftClose v-else class="size-4" />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="right">
+          {{ isCollapsed ? '展开功能导航' : '收起功能导航' }}
+        </TooltipContent>
+      </Tooltip>
+    </div>
 
     <nav class="flex flex-col gap-1" aria-label="工具">
-      <button
-        type="button"
-        class="flex h-10 w-full items-center gap-2 rounded-md px-2 text-left text-sm transition-colors max-md:justify-center max-md:px-0"
-        :class="
-          activeFeature === 'json-tools'
-            ? 'bg-primary text-primary-foreground'
-            : 'text-muted-foreground hover:bg-accent hover:text-foreground'
-        "
-        :aria-current="activeFeature === 'json-tools' ? 'page' : undefined"
-        aria-label="JSON Tools"
-        @click="emit('update:activeFeature', 'json-tools')"
-      >
-        <Braces class="size-4 shrink-0" />
-        <span class="min-w-0 truncate max-md:sr-only">JSON Tools</span>
-      </button>
+      <Tooltip>
+        <TooltipTrigger as-child>
+          <button
+            type="button"
+            class="flex h-10 w-full items-center gap-2 rounded-md px-2 text-left text-sm transition-colors"
+            :class="[
+              isCollapsed && 'justify-center px-0',
+              activeFeature === 'json-tools'
+                ? 'bg-primary text-primary-foreground'
+                : 'text-muted-foreground hover:bg-accent hover:text-foreground',
+            ]"
+            :aria-current="activeFeature === 'json-tools' ? 'page' : undefined"
+            aria-label="JSON Tools"
+            @click="emit('update:activeFeature', 'json-tools')"
+          >
+            <Braces class="size-4 shrink-0" />
+            <span v-if="!isCollapsed" class="min-w-0 truncate">JSON Tools</span>
+          </button>
+        </TooltipTrigger>
+        <TooltipContent v-if="isCollapsed" side="right">JSON Tools</TooltipContent>
+      </Tooltip>
     </nav>
   </aside>
 </template>
