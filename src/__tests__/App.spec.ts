@@ -5,7 +5,7 @@ import { createPinia } from 'pinia'
 import App from '../App.vue'
 
 describe('App', () => {
-  it('mounts and renders the header', () => {
+  it('shows JSON Tools as the default active feature', () => {
     const wrapper = mount(App, {
       global: {
         plugins: [createPinia()],
@@ -14,6 +14,9 @@ describe('App', () => {
         },
       },
     })
+
     expect(wrapper.text()).toContain('JSON Tools')
+    expect(wrapper.find('[aria-label="功能列表"]').exists()).toBe(true)
+    expect(wrapper.get('button[aria-current="page"]').attributes('aria-label')).toBe('JSON Tools')
   })
 })
