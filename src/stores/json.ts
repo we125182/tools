@@ -82,12 +82,10 @@ export const useJsonStore = defineStore('json', () => {
 
   // ---------- 折叠态 ----------
   // 仅记录「显式展开(true)/折叠(false)」的容器节点 pathKey。
-  // 默认行为：深度 < defaultExpandDepth 时展开，否则折叠；显式值优先。
+  // 默认展开全部容器节点；显式值优先。
   const expandMap = reactive<Map<string, boolean>>(new Map())
-  const baseDefaultDepth = ref(2)
-  const defaultExpandDepth = computed(() =>
-    isLargeData.value ? 1 : baseDefaultDepth.value,
-  )
+  const baseDefaultDepth = ref(Number.POSITIVE_INFINITY)
+  const defaultExpandDepth = computed(() => baseDefaultDepth.value)
 
   // ---------- 工具态 ----------
   const indentSize = useStorage<'2' | '4'>('jt:indent', '2')

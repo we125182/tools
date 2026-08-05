@@ -36,6 +36,9 @@ describe('JsonNode', () => {
 
   it('renders collapsed container summaries without nested brackets', () => {
     const pinia = createPinia()
+    const store = useJsonStore(pinia)
+    store.setExpanded(['data'], false)
+
     const wrapper = mount(JsonNode, {
       props: {
         value: { first: 1, second: 2 },

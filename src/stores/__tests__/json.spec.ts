@@ -24,6 +24,15 @@ describe('JSON tree expansion', () => {
     expect(store.hasExpandedNodes).toBe(false)
   })
 
+  it('expands all container nodes by default', () => {
+    const store = useJsonStore()
+    store.parsed = { first: { second: { value: 1 } } }
+
+    expect(store.isExpanded([], 0)).toBe(true)
+    expect(store.isExpanded(['first'], 1)).toBe(true)
+    expect(store.isExpanded(['first', 'second'], 2)).toBe(true)
+  })
+
   it('defaults object key sorting to ascending order', () => {
     const store = useJsonStore()
 

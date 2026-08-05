@@ -89,7 +89,7 @@ const errorItems = computed(() =>
         class="flex items-center gap-2 border-y bg-amber-500/10 px-3 py-1.5 text-xs text-amber-700 dark:text-amber-400"
       >
         <AlertTriangle class="size-4 shrink-0" />
-        <span>数据较大（{{ store.nodeCount }} 节点），已默认折叠以保持流畅。</span>
+        <span>数据较大（{{ store.nodeCount }} 节点），大量展开节点可能影响滚动流畅度。</span>
       </div>
 
       <ScrollArea class="min-h-0 flex-1">
