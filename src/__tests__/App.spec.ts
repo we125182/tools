@@ -28,5 +28,7 @@ describe('App', () => {
     expect(navigation.classes()).toContain('w-14')
     expect(wrapper.find('button[aria-label="展开功能导航"]').exists()).toBe(true)
     expect(featureButton.text()).toBe('')
+    expect(featureButton.attributes('title')).toBe('JSON Tools')
+    expect(wrapper.get('[data-feature-tooltip]').text()).toBe('JSON Tools')
   })
 })

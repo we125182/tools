@@ -42,27 +42,33 @@ const isCollapsed = ref(false)
     </div>
 
     <nav class="flex flex-col gap-1" aria-label="工具">
-      <Tooltip>
-        <TooltipTrigger as-child>
-          <button
-            type="button"
-            class="flex h-10 w-full items-center gap-2 rounded-md px-2 text-left text-sm transition-colors"
-            :class="[
-              isCollapsed && 'justify-center px-0',
-              activeFeature === 'json-tools'
-                ? 'bg-primary text-primary-foreground'
-                : 'text-muted-foreground hover:bg-accent hover:text-foreground',
-            ]"
-            :aria-current="activeFeature === 'json-tools' ? 'page' : undefined"
-            aria-label="JSON Tools"
-            @click="emit('update:activeFeature', 'json-tools')"
-          >
-            <Braces class="size-4 shrink-0" />
-            <span v-if="!isCollapsed" class="min-w-0 truncate">JSON Tools</span>
-          </button>
-        </TooltipTrigger>
-        <TooltipContent v-if="isCollapsed" side="right">JSON Tools</TooltipContent>
-      </Tooltip>
+      <div class="group relative">
+        <button
+          type="button"
+          class="flex h-10 w-full items-center gap-2 rounded-md px-2 text-left text-sm transition-colors"
+          :class="[
+            isCollapsed && 'justify-center px-0',
+            activeFeature === 'json-tools'
+              ? 'bg-primary text-primary-foreground'
+              : 'text-muted-foreground hover:bg-accent hover:text-foreground',
+          ]"
+          :aria-current="activeFeature === 'json-tools' ? 'page' : undefined"
+          aria-label="JSON Tools"
+          title="JSON Tools"
+          @click="emit('update:activeFeature', 'json-tools')"
+        >
+          <Braces class="size-4 shrink-0" />
+          <span v-if="!isCollapsed" class="min-w-0 truncate">JSON Tools</span>
+        </button>
+        <span
+          v-if="isCollapsed"
+          data-feature-tooltip
+          role="tooltip"
+          class="pointer-events-none absolute top-1/2 left-full z-50 ml-2 -translate-y-1/2 whitespace-nowrap rounded-md bg-primary px-3 py-1.5 text-xs text-primary-foreground opacity-0 shadow-sm transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
+        >
+          JSON Tools
+        </span>
+      </div>
     </nav>
   </aside>
 </template>
