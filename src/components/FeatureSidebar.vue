@@ -11,7 +11,7 @@ const emit = defineEmits<{
   'update:activeFeature': [feature: 'json-tools']
 }>()
 
-const isCollapsed = ref(false)
+const isCollapsed = ref(true)
 </script>
 
 <template>
