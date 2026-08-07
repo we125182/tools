@@ -229,7 +229,7 @@ function collapseSubtree() {
       <ContextMenuTrigger as-child>
         <div
           ref="rowRef"
-          class="group flex cursor-default items-baseline gap-1 rounded-sm px-1 py-px font-mono text-[13px] leading-5 hover:bg-accent/50"
+          class="group flex cursor-default items-start gap-1 rounded-sm px-1 py-px font-mono text-[13px] leading-5 hover:bg-accent/50"
           :class="{
             'ring-2 ring-primary/70 ring-inset rounded': isCurrentMatch,
           }"
@@ -237,12 +237,13 @@ function collapseSubtree() {
           @click="toggle"
         >
           <span
-            class="inline-flex w-4 shrink-0 items-center justify-center text-muted-foreground transition-transform group-hover:text-foreground"
+            class="json-node-toggle mt-0.5 inline-flex size-4 shrink-0 items-center justify-center rounded-sm bg-primary text-primary-foreground transition-colors group-hover:bg-primary/85"
             :class="{ invisible: !hasChildren }"
           >
             <component
               :is="expanded ? ChevronDown : ChevronRight"
-              class="size-3.5"
+              class="size-3"
+              :stroke-width="3"
             />
           </span>
 

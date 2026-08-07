@@ -100,6 +100,35 @@ describe('JsonNode', () => {
     expect(nestedNode.find('div.font-mono.text-muted-foreground').text()).toBe('},')
   })
 
+  it('renders node toggles as solid icons centered on the first line', () => {
+    const pinia = createPinia()
+    const wrapper = mount(JsonNode, {
+      props: {
+        value: { child: 1 },
+        segments: [],
+        depth: 0,
+        isLast: true,
+      },
+      global: {
+        plugins: [pinia],
+        stubs: {
+          ContextMenu: { template: '<div><slot /></div>' },
+          ContextMenuTrigger: { template: '<div><slot /></div>' },
+          ContextMenuContent: true,
+        },
+      },
+    })
+
+    const toggle = wrapper.find('.json-node-toggle')
+
+    expect(wrapper.find('.group').classes()).toContain('items-start')
+    expect(toggle.classes()).toEqual(expect.arrayContaining([
+      'mt-0.5',
+      'bg-primary',
+      'text-primary-foreground',
+    ]))
+  })
+
   it('keeps primitive value commas within the wrapping text container', () => {
     const pinia = createPinia()
     const wrapper = mount(JsonNode, {
