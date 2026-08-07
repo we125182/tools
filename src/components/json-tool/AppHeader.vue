@@ -5,8 +5,13 @@ import { Switch } from '@/components/ui/switch'
 import {
   Braces,
   Moon,
+  ScrollText,
   Sun,
 } from 'lucide-vue-next'
+
+defineProps<{
+  activeFeature: 'json-tools' | 'log-viewer'
+}>()
 
 // ---------- 深色模式 ----------
 const isDark = useStorage('jt:theme', () => {
@@ -28,11 +33,16 @@ watch(isDark, (v) => applyTheme(v))
   >
     <div class="flex items-center gap-2">
       <div class="flex size-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
-        <Braces class="size-4" />
+        <Braces v-if="activeFeature === 'json-tools'" class="size-4" />
+        <ScrollText v-else class="size-4" />
       </div>
       <div class="leading-tight">
-        <h1 class="text-sm font-semibold">JSON Tools</h1>
-        <p class="text-[11px] text-muted-foreground">校验 · 格式化 · 浏览</p>
+        <h1 class="text-sm font-semibold">
+          {{ activeFeature === 'json-tools' ? 'JSON Tools' : 'Log Viewer' }}
+        </h1>
+        <p class="text-[11px] text-muted-foreground">
+          {{ activeFeature === 'json-tools' ? '校验 · 格式化 · 浏览' : '请求 · 响应 · JSON 浏览' }}
+        </p>
       </div>
     </div>
 

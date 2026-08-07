@@ -19,6 +19,7 @@ import {
   typeOf,
   type PathSegment,
 } from '@/lib/jsonc'
+import type { JsonTreeController } from './tree-controller'
 import {
   ContextMenu,
   ContextMenuContent,
@@ -34,13 +35,18 @@ const props = defineProps<{
   segments: PathSegment[]
   depth: number
   isLast?: boolean
+  controller?: JsonTreeController
 }>()
 
-const store = useJsonStore()
+const defaultController = useJsonStore()
 const { copy } = useClipboard({ legacy: true })
 
 const STRING_DISPLAY_LIMIT = 180
 const ALPHANUMERIC_STRING = /^[A-Za-z0-9]+$/
+
+const controller = computed<JsonTreeController>(
+  () => props.controller ?? defaultController,
+)
 
 const nodeType = computed(() => typeOf(props.value))
 const isContainer = computed(
@@ -72,13 +78,13 @@ const hasChildren = computed(() => {
 
 const expanded = computed(() =>
   isContainer.value && hasChildren.value
-    ? store.isExpanded(props.segments, props.depth)
+    ? controller.value.isExpanded(props.segments, props.depth)
     : false,
 )
 
-const isMatch = computed(() => store.matchedPathKeys.has(nodeKey.value))
+const isMatch = computed(() => controller.value.matchedPathKeys.has(nodeKey.value))
 const isCurrentMatch = computed(
-  () => store.currentMatchKey() === nodeKey.value,
+  () => controller.value.currentMatchKey() === nodeKey.value,
 )
 
 // 当前命中节点：滚动到视口
@@ -96,9 +102,9 @@ const entries = computed<Array<[string | number, unknown]>>(() => {
   }
   if (props.value && typeof props.value === 'object') {
     const objectEntries = Object.entries(props.value)
-    if (store.sortMode === 'default') return objectEntries
+    if (controller.value.sortMode === 'default') return objectEntries
 
-    const direction = store.sortMode === 'asc' ? 1 : -1
+    const direction = controller.value.sortMode === 'asc' ? 1 : -1
     return objectEntries.sort(([left], [right]) =>
       direction * left.localeCompare(right, 'zh-Hans-CN', {
         numeric: true,
@@ -110,7 +116,7 @@ const entries = computed<Array<[string | number, unknown]>>(() => {
 })
 
 function toggle() {
-  if (hasChildren.value) store.toggleExpanded(props.segments, props.depth)
+  if (hasChildren.value) controller.value.toggleExpanded(props.segments, props.depth)
 }
 
 function displayValue(): string {
@@ -133,7 +139,7 @@ interface TextPart {
 }
 
 function highlightText(text: string): TextPart[] {
-  const query = store.query.trim()
+  const query = controller.value.query.trim()
   if (!query) return [{ text, isMatch: false }]
 
   const lowerText = text.toLowerCase()
@@ -176,14 +182,14 @@ async function copyValue() {
   let text: string
   if (props.value === null) text = 'null'
   else if (typeof props.value === 'string') text = props.value
-  else if (typeof props.value === 'object') text = beautify(props.value, Number(store.indentSize))
+  else if (typeof props.value === 'object') text = beautify(props.value, Number(controller.value.indentSize))
   else text = String(props.value)
   await copy(text)
   toast({ title: '已复制值', description: text.length > 60 ? text.slice(0, 60) + '…' : text })
 }
 
 async function copyObject() {
-  const text = beautify(props.value, Number(store.indentSize))
+  const text = beautify(props.value, Number(controller.value.indentSize))
   await copy(text)
   toast({ title: '已复制对象', description: text.length > 60 ? text.slice(0, 60) + '…' : text })
 }
@@ -192,10 +198,10 @@ async function copyObject() {
 function expandSubtree() {
   const visit = (val: unknown, segs: PathSegment[]) => {
     if (Array.isArray(val)) {
-      store.setExpanded(segs, true)
+      controller.value.setExpanded(segs, true)
       val.forEach((item, i) => visit(item, [...segs, i]))
     } else if (val && typeof val === 'object') {
-      store.setExpanded(segs, true)
+      controller.value.setExpanded(segs, true)
       for (const [k, v] of Object.entries(val)) visit(v, [...segs, k])
     }
   }
@@ -206,10 +212,10 @@ function expandSubtree() {
 function collapseSubtree() {
   const visit = (val: unknown, segs: PathSegment[]) => {
     if (Array.isArray(val)) {
-      store.setExpanded(segs, false)
+      controller.value.setExpanded(segs, false)
       val.forEach((item, i) => visit(item, [...segs, i]))
     } else if (val && typeof val === 'object') {
-      store.setExpanded(segs, false)
+      controller.value.setExpanded(segs, false)
       for (const [k, v] of Object.entries(val)) visit(v, [...segs, k])
     }
   }
@@ -337,6 +343,7 @@ function collapseSubtree() {
         :segments="[...segments, k]"
         :depth="depth + 1"
         :is-last="idx === entries.length - 1"
+        :controller="controller"
       />
     </div>
 

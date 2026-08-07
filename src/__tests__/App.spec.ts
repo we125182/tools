@@ -33,4 +33,21 @@ describe('App', () => {
     expect(wrapper.find('button[aria-label="收起功能导航"]').exists()).toBe(true)
     expect(featureButton.text()).toBe('JSON Tools')
   })
+
+  it('opens Log Viewer from the feature navigation', async () => {
+    const wrapper = mount(App, {
+      global: {
+        plugins: [createPinia()],
+        stubs: {
+          teleport: true,
+        },
+      },
+    })
+
+    await wrapper.get('button[aria-label="Log Viewer"]').trigger('click')
+
+    expect(wrapper.get('h1').text()).toBe('Log Viewer')
+    expect(wrapper.get('[aria-label="Log Viewer"]').attributes('aria-current')).toBe('page')
+    expect(wrapper.text()).toContain('导入日志文件后查看请求详情')
+  })
 })

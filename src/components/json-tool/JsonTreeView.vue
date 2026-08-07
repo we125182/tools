@@ -2,20 +2,32 @@
 import { computed } from 'vue'
 import { useJsonStore } from '@/stores/json'
 import JsonNode from './JsonNode.vue'
+import type { JsonTreeController } from './tree-controller'
 
 const store = useJsonStore()
+const props = defineProps<{
+  value?: unknown
+  controller?: JsonTreeController
+  useStoreValue?: boolean
+}>()
 
-const hasData = computed(() => store.parsed !== null && store.parsed !== undefined)
+const displayedValue = computed(() =>
+  props.useStoreValue === false ? props.value : store.parsed,
+)
+const hasData = computed(
+  () => displayedValue.value !== null && displayedValue.value !== undefined,
+)
 </script>
 
 <template>
   <div class="font-mono">
     <JsonNode
       v-if="hasData"
-      :value="store.parsed"
+      :value="displayedValue"
       :segments="[]"
       :depth="0"
       :is-last="true"
+      :controller="controller"
     />
     <div
       v-else

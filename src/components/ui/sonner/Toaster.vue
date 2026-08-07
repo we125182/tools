@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
 import { Toaster as Sonner } from 'vue-sonner'
+import 'vue-sonner/style.css'
 
 const isDark = ref(
   document.documentElement.classList.contains('dark'),
