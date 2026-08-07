@@ -39,6 +39,9 @@ const props = defineProps<{
 const store = useJsonStore()
 const { copy } = useClipboard({ legacy: true })
 
+const STRING_DISPLAY_LIMIT = 180
+const ALPHANUMERIC_STRING = /^[A-Za-z0-9]+$/
+
 const nodeType = computed(() => typeOf(props.value))
 const isContainer = computed(
   () => nodeType.value === 'object' || nodeType.value === 'array',
@@ -47,6 +50,17 @@ const openBracket = computed(() => (nodeType.value === 'array' ? '[' : '{'))
 const closeBracket = computed(() => (nodeType.value === 'array' ? ']' : '}'))
 
 const nodeKey = computed(() => pathKey(props.segments))
+
+const displayStringValue = computed(() => {
+  if (typeof props.value !== 'string') return ''
+  if (
+    props.value.length > STRING_DISPLAY_LIMIT &&
+    ALPHANUMERIC_STRING.test(props.value)
+  ) {
+    return `${props.value.slice(0, STRING_DISPLAY_LIMIT)}…`
+  }
+  return props.value
+})
 
 const hasChildren = computed(() => {
   if (!isContainer.value) return false
@@ -102,7 +116,7 @@ function toggle() {
 function displayValue(): string {
   switch (nodeType.value) {
     case 'string':
-      return `"${props.value as string}"`
+      return `"${displayStringValue.value}"`
     case 'number':
     case 'boolean':
       return String(props.value)

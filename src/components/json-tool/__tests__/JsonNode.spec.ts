@@ -1,11 +1,22 @@
 import { nextTick } from 'vue'
 import { mount } from '@vue/test-utils'
 import { createPinia } from 'pinia'
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import JsonNode from '../JsonNode.vue'
 import { useJsonStore } from '@/stores/json'
 
+const { copy } = vi.hoisted(() => ({ copy: vi.fn() }))
+
+vi.mock('@vueuse/core', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@vueuse/core')>()),
+  useClipboard: () => ({ copy }),
+}))
+
 describe('JsonNode', () => {
+  beforeEach(() => {
+    copy.mockClear()
+  })
+
   it('highlights matching text in both the key and primitive value', () => {
     const pinia = createPinia()
     const store = useJsonStore(pinia)
@@ -113,6 +124,83 @@ describe('JsonNode', () => {
 
     expect(value.text()).toBe('"a long value that may wrap in a narrow panel",')
     expect(value.find('span.text-muted-foreground').text()).toBe(',')
+  })
+
+  it('truncates alphanumeric string values after 180 characters only', () => {
+    const pinia = createPinia()
+    const longValue = 'a'.repeat(181)
+    const wrapper = mount(JsonNode, {
+      props: {
+        value: longValue,
+        keyName: 'token',
+        segments: ['token'],
+        depth: 1,
+        isLast: true,
+      },
+      global: {
+        plugins: [pinia],
+        stubs: {
+          ContextMenu: { template: '<div><slot /></div>' },
+          ContextMenuTrigger: { template: '<div><slot /></div>' },
+          ContextMenuContent: true,
+        },
+      },
+    })
+
+    expect(wrapper.find('.break-all').text()).toBe(`"${'a'.repeat(180)}…"`)
+  })
+
+  it('does not truncate string values containing non-alphanumeric characters', () => {
+    const pinia = createPinia()
+    const longValue = `${'a'.repeat(180)}-`
+    const wrapper = mount(JsonNode, {
+      props: {
+        value: longValue,
+        keyName: 'token',
+        segments: ['token'],
+        depth: 1,
+        isLast: true,
+      },
+      global: {
+        plugins: [pinia],
+        stubs: {
+          ContextMenu: { template: '<div><slot /></div>' },
+          ContextMenuTrigger: { template: '<div><slot /></div>' },
+          ContextMenuContent: true,
+        },
+      },
+    })
+
+    expect(wrapper.find('.break-all').text()).toBe(`"${longValue}"`)
+  })
+
+  it('copies the complete value of a truncated string', async () => {
+    const pinia = createPinia()
+    const longValue = 'a'.repeat(181)
+    const wrapper = mount(JsonNode, {
+      props: {
+        value: longValue,
+        keyName: 'token',
+        segments: ['token'],
+        depth: 1,
+        isLast: true,
+      },
+      global: {
+        plugins: [pinia],
+        stubs: {
+          ContextMenu: { template: '<div><slot /></div>' },
+          ContextMenuTrigger: { template: '<div><slot /></div>' },
+          ContextMenuContent: { template: '<div><slot /></div>' },
+          ContextMenuItem: {
+            template: '<button @click="$emit(\'select\')"><slot /></button>',
+          },
+        },
+      },
+    })
+
+    await wrapper.findAll('button')[1]!.trigger('click')
+
+    expect(copy).toHaveBeenCalledWith(longValue)
   })
 
   it('sorts object keys without changing array index order', async () => {
