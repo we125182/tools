@@ -1,6 +1,4 @@
-import { computed, markRaw, reactive, ref, shallowRef, watch } from 'vue'
-import { defineStore } from 'pinia'
-import { useStorage } from '@vueuse/core'
+import { create } from 'zustand'
 import {
   beautify,
   estimateNodeCount,
@@ -24,10 +22,53 @@ export interface SearchResult {
   segments: PathSegment[]
 }
 
+interface SearchState {
+  results: SearchResult[]
+  matchIndex: number
+  expandMap: Map<string, boolean>
+}
+
+export interface JsonStore {
+  tabs: Tab[]
+  activeId: string
+  parsed: unknown
+  errors: JsonError[]
+  hasParsed: boolean
+  nodeCount: number
+  expandMap: Map<string, boolean>
+  indentSize: '2' | '4'
+  query: string
+  sortMode: SortMode
+  results: SearchResult[]
+  matchIndex: number
+  setInput: (input: string) => void
+  setActive: (id: string) => void
+  addTab: () => void
+  closeTab: (id: string) => void
+  duplicateTab: (id: string) => void
+  renameTab: (id: string, name: string) => void
+  reparse: () => void
+  format: () => void
+  compress: () => void
+  clearInput: () => void
+  setIndentSize: (indentSize: '2' | '4') => void
+  setQuery: (query: string) => void
+  setSortMode: (sortMode: SortMode) => void
+  nextMatch: () => void
+  prevMatch: () => void
+  clearSearch: () => void
+  setExpanded: (segments: PathSegment[], expanded: boolean) => void
+  toggleExpanded: (segments: PathSegment[], depth: number) => void
+  expandAll: () => void
+  collapseAll: () => void
+  reset: () => void
+}
+
 const LARGE_NODE_THRESHOLD = 2000
+const storage = typeof window === 'undefined' ? undefined : window.localStorage
 
 function uid(): string {
-  return 't' + Math.random().toString(36).slice(2, 10)
+  return `t${Math.random().toString(36).slice(2, 10)}`
 }
 
 function createTab(id: string, name: string, input = ''): Tab {
@@ -35,11 +76,9 @@ function createTab(id: string, name: string, input = ''): Tab {
 }
 
 function normalizeTab(tab: Partial<Tab>): Tab {
-  const sortMode: SortMode =
-    tab.sortMode === 'default' || tab.sortMode === 'asc' || tab.sortMode === 'desc'
-      ? tab.sortMode
-      : 'asc'
-
+  const sortMode: SortMode = ['default', 'asc', 'desc'].includes(tab.sortMode ?? '')
+    ? tab.sortMode as SortMode
+    : 'asc'
   return {
     id: tab.id ?? uid(),
     name: tab.name ?? 'Tab',
@@ -49,393 +88,273 @@ function normalizeTab(tab: Partial<Tab>): Tab {
   }
 }
 
-export const useJsonStore = defineStore('json', () => {
-  // ---------- 多 Tab ----------
-  const tabs = useStorage<Tab[]>('jt:tabs', [
-    createTab('t1', 'Tab 1'),
-  ])
-  const activeId = useStorage('jt:activeId', 't1')
+function readTabs(): Tab[] {
+  try {
+    const value = JSON.parse(storage?.getItem('jt:tabs') ?? 'null')
+    return Array.isArray(value) && value.length ? value.map(normalizeTab) : [createTab('t1', 'Tab 1')]
+  } catch {
+    return [createTab('t1', 'Tab 1')]
+  }
+}
 
-  // 为旧版本地存储补齐搜索与排序字段。
-  tabs.value = tabs.value.map((tab) => normalizeTab(tab))
+function readActiveId(tabs: Tab[]): string {
+  const activeId = storage?.getItem('jt:activeId') ?? tabs[0]!.id
+  return tabs.some((tab) => tab.id === activeId) ? activeId : tabs[0]!.id
+}
 
-  const activeTab = computed<Tab>(
-    () => tabs.value.find((t) => t.id === activeId.value) ?? tabs.value[0]!,
-  )
-  const activeInput = computed({
-    get: () => activeTab.value.input,
-    set: (v: string) => {
-      activeTab.value.input = v
-    },
-  })
-  const query = ref(activeTab.value.query)
-  const sortMode = ref<SortMode>(activeTab.value.sortMode)
-  let restoringTabViewState = false
+function readIndent(): '2' | '4' {
+  return storage?.getItem('jt:indent') === '4' ? '4' : '2'
+}
 
-  // ---------- 解析结果 ----------
-  // markRaw + shallowRef：避免 Vue 深度响应化大型 JSON 导致卡顿
-  const parsed = shallowRef<unknown>(null)
-  const errors = ref<JsonError[]>([])
-  const hasParsed = ref(false)
-  const nodeCount = ref(0)
-  const isLargeData = computed(() => nodeCount.value > LARGE_NODE_THRESHOLD)
+function persist(tabs: Tab[], activeId: string, indentSize: '2' | '4') {
+  try {
+    storage?.setItem('jt:tabs', JSON.stringify(tabs))
+    storage?.setItem('jt:activeId', activeId)
+    storage?.setItem('jt:indent', indentSize)
+  } catch {
+    // Storage failures must not stop JSON editing.
+  }
+}
 
-  // ---------- 折叠态 ----------
-  // 仅记录「显式展开(true)/折叠(false)」的容器节点 pathKey。
-  // 默认展开全部容器节点；显式值优先。
-  const expandMap = reactive<Map<string, boolean>>(new Map())
-  const baseDefaultDepth = ref(Number.POSITIVE_INFINITY)
-  const defaultExpandDepth = computed(() => baseDefaultDepth.value)
+function activeTab(state: Pick<JsonStore, 'tabs' | 'activeId'>): Tab {
+  return state.tabs.find((tab) => tab.id === state.activeId) ?? state.tabs[0]!
+}
 
-  // ---------- 工具态 ----------
-  const indentSize = useStorage<'2' | '4'>('jt:indent', '2')
-
-  // ---------- 搜索 ----------
-  const results = ref<SearchResult[]>([])
-  const matchIndex = ref(0)
-  const matchCount = computed(() => results.value.length)
-  const matchedPathKeys = computed(
-    () => new Set(results.value.map((r) => pathKey(r.segments))),
-  )
-
-  // ---------- 折叠态计算 ----------
-  function isExpanded(segments: PathSegment[], depth: number): boolean {
-    const key = pathKey(segments)
-    const explicit = expandMap.get(key)
-    if (explicit !== undefined) return explicit
-    return depth < defaultExpandDepth.value
+function findSearch(value: unknown, query: string, baseExpandMap: Map<string, boolean>, nodeCount: number): SearchState {
+  const normalizedQuery = query.trim().toLowerCase()
+  if (!normalizedQuery || value === null || value === undefined) {
+    return { results: [], matchIndex: -1, expandMap: baseExpandMap }
   }
 
-  const hasExpandedNodes = computed(() => {
-    let hasExpanded = false
-
-    const visit = (value: unknown, segments: PathSegment[], depth: number) => {
-      const children = Array.isArray(value)
-        ? value.map((item, index) => [index, item] as const)
-        : value && typeof value === 'object'
-          ? Object.entries(value)
-          : []
-
-      if (children.length === 0 || !isExpanded(segments, depth)) return
-
-      hasExpanded = true
-      for (const [key, child] of children) {
-        visit(child, [...segments, key], depth + 1)
-      }
+  const results: SearchResult[] = []
+  const ancestors = new Set<string>()
+  const visit = (node: unknown, segments: PathSegment[]) => {
+    const key = segments[segments.length - 1]
+    const matchesKey = key !== undefined && String(key).toLowerCase().includes(normalizedQuery)
+    const matchesValue = node !== null && typeof node !== 'object' && String(node).toLowerCase().includes(normalizedQuery)
+    if (matchesKey || matchesValue) {
+      results.push({ segments })
+      for (let index = 1; index < segments.length; index++) ancestors.add(pathKey(segments.slice(0, index)))
     }
-
-    visit(parsed.value, [], 0)
-    return hasExpanded
-  })
-
-  function setExpanded(segments: PathSegment[], expanded: boolean) {
-    expandMap.set(pathKey(segments), expanded)
+    if (Array.isArray(node)) node.forEach((item, index) => visit(item, [...segments, index]))
+    else if (node && typeof node === 'object') Object.entries(node).forEach(([key, item]) => visit(item, [...segments, key]))
   }
+  visit(value, [])
 
-  function toggleExpanded(segments: PathSegment[], depth: number) {
-    setExpanded(segments, !isExpanded(segments, depth))
+  const expandMap = new Map(baseExpandMap)
+  ancestors.forEach((key) => expandMap.set(key, true))
+  if (nodeCount > LARGE_NODE_THRESHOLD) {
+    results.forEach(({ segments }) => {
+      for (let index = 1; index <= segments.length; index++) expandMap.set(pathKey(segments.slice(0, index)), true)
+    })
   }
+  return { results, matchIndex: results.length ? 0 : -1, expandMap }
+}
 
-  function expandAll() {
-    walkContainers((segments) => expandMap.set(pathKey(segments), true))
+function walkContainers(value: unknown, callback: (segments: PathSegment[]) => void, segments: PathSegment[] = []) {
+  if (Array.isArray(value)) {
+    callback(segments)
+    value.forEach((item, index) => walkContainers(item, callback, [...segments, index]))
+  } else if (value && typeof value === 'object') {
+    callback(segments)
+    Object.entries(value).forEach(([key, item]) => walkContainers(item, callback, [...segments, key]))
   }
+}
 
-  function collapseAll() {
-    walkContainers((segments) => expandMap.set(pathKey(segments), false))
-  }
+const initialTabs = readTabs()
+const initialActiveId = readActiveId(initialTabs)
 
-  function collapseLevel(maxDepth: number) {
-    walkContainers((segments, depth) =>
-      expandMap.set(pathKey(segments), depth < maxDepth),
-    )
-  }
+export const useJsonStore = create<JsonStore>((set, get) => ({
+  tabs: initialTabs,
+  activeId: initialActiveId,
+  parsed: null,
+  errors: [],
+  hasParsed: false,
+  nodeCount: 0,
+  expandMap: new Map(),
+  indentSize: readIndent(),
+  query: initialTabs.find((tab) => tab.id === initialActiveId)?.query ?? '',
+  sortMode: initialTabs.find((tab) => tab.id === initialActiveId)?.sortMode ?? 'asc',
+  results: [],
+  matchIndex: -1,
 
-  function walkContainers(
-    fn: (segments: PathSegment[], depth: number) => void,
-  ) {
-    const visit = (value: unknown, segments: PathSegment[], depth: number) => {
-      if (Array.isArray(value)) {
-        fn(segments, depth)
-        value.forEach((item, i) => visit(item, [...segments, i], depth + 1))
-      } else if (value && typeof value === 'object') {
-        fn(segments, depth)
-        for (const [k, v] of Object.entries(value)) {
-          visit(v, [...segments, k], depth + 1)
-        }
-      }
-    }
-    visit(parsed.value, [], 0)
-  }
-
-  // ---------- Tab 操作 ----------
-  function setActive(id: string) {
-    if (id === activeId.value || !tabs.value.some((t) => t.id === id)) return
-
-    saveActiveViewState()
-    activeId.value = id
-    restoreActiveViewState()
-    resetSearchResults()
-
-    if (activeInput.value.trim()) {
-      format()
-    } else {
-      resetParsedState()
-    }
-  }
-
-  function addTab() {
-    const n = tabs.value.length + 1
-    const tab = createTab(uid(), `Tab ${n}`)
-    tabs.value.push(tab)
-    setActive(tab.id)
-  }
-
-  function closeTab(id: string) {
-    const idx = tabs.value.findIndex((t) => t.id === id)
-    if (idx === -1) return
-    tabs.value.splice(idx, 1)
-    if (tabs.value.length === 0) {
-      const fresh = createTab(uid(), 'Tab 1')
-      tabs.value.push(fresh)
-      activeId.value = fresh.id
-      restoreActiveViewState()
-      resetParsedState()
-    } else if (activeId.value === id) {
-      setActive(tabs.value[Math.max(0, idx - 1)]!.id)
-    }
-  }
-
-  function duplicateTab(id: string) {
-    const src = tabs.value.find((t) => t.id === id)
-    if (!src) return
-    const idx = tabs.value.findIndex((t) => t.id === id)
-    const copy: Tab = { ...src, id: uid(), name: `${src.name} copy` }
-    tabs.value.splice(idx + 1, 0, copy)
-    setActive(copy.id)
-  }
-
-  function renameTab(id: string, name: string) {
-    const t = tabs.value.find((x) => x.id === id)
-    if (t) t.name = name
-  }
-
-  function saveActiveViewState() {
-    activeTab.value.query = query.value
-    activeTab.value.sortMode = sortMode.value
-  }
-
-  function restoreActiveViewState() {
-    restoringTabViewState = true
-    query.value = activeTab.value.query
-    sortMode.value = activeTab.value.sortMode
-    restoringTabViewState = false
-  }
-
-  // ---------- 解析 / 格式化 ----------
-  function reparse() {
-    const { value, errors: errs } = validate(activeInput.value)
-    errors.value = errs
-    if (errs.length === 0) {
-      parsed.value = markRaw(value as object)
-      nodeCount.value = estimateNodeCount(value as object)
-      if (query.value.trim()) runSearch()
-    } else {
-      parsed.value = null
-      nodeCount.value = 0
-      resetSearchResults()
-    }
-    hasParsed.value = true
-  }
-
-  function formatWithIndent(indent: number) {
-    const { value, errors: errs } = validate(activeInput.value)
-    errors.value = errs
-    if (errs.length === 0) {
-      const beautified = beautify(value, indent)
-      activeInput.value = beautified
-      parsed.value = markRaw(JSON.parse(beautified) as object)
-      nodeCount.value = estimateNodeCount(JSON.parse(beautified) as object)
-      resetExpand()
-      if (query.value.trim()) runSearch()
-      hasParsed.value = true
-    } else {
-      parsed.value = null
-      nodeCount.value = 0
-      resetSearchResults()
-      hasParsed.value = true
-    }
-  }
-
-  /** 解析成功后以选定缩进格式化；失败时保留输入并展示错误。 */
-  function format() {
-    formatWithIndent(Number(indentSize.value))
-  }
-
-  /** 解析成功后压缩为单行规范 JSON。 */
-  function compress() {
-    formatWithIndent(0)
-  }
-
-  function clearInput() {
-    activeInput.value = ''
-    resetParsedState()
-    clearSearch()
-  }
-
-  function resetParsedState() {
-    parsed.value = null
-    errors.value = []
-    hasParsed.value = false
-    nodeCount.value = 0
-    resetExpand()
-  }
-
-  function resetExpand() {
-    expandMap.clear()
-  }
-
-  // ---------- 搜索 ----------
-  function runSearch() {
-    const q = query.value.trim().toLowerCase()
-    if (!q) {
-      clearSearch()
+  setInput: (input) => {
+    set((state) => {
+      const tabs = state.tabs.map((tab) => tab.id === state.activeId ? { ...tab, input } : tab)
+      persist(tabs, state.activeId, state.indentSize)
+      return { tabs }
+    })
+  },
+  setActive: (id) => {
+    const state = get()
+    if (id === state.activeId || !state.tabs.some((tab) => tab.id === id)) return
+    const nextTab = state.tabs.find((tab) => tab.id === id)!
+    set({
+      activeId: id,
+      query: nextTab.query,
+      sortMode: nextTab.sortMode,
+      parsed: null,
+      errors: [],
+      hasParsed: false,
+      nodeCount: 0,
+      results: [],
+      matchIndex: -1,
+      expandMap: new Map(),
+    })
+    persist(state.tabs, id, state.indentSize)
+    if (nextTab.input.trim()) get().format()
+  },
+  addTab: () => {
+    const state = get()
+    const tab = createTab(uid(), `Tab ${state.tabs.length + 1}`)
+    const tabs = [...state.tabs, tab]
+    set({ tabs, activeId: tab.id, query: '', sortMode: 'asc', parsed: null, errors: [], hasParsed: false, nodeCount: 0, results: [], matchIndex: -1, expandMap: new Map() })
+    persist(tabs, tab.id, state.indentSize)
+  },
+  closeTab: (id) => {
+    const state = get()
+    const index = state.tabs.findIndex((tab) => tab.id === id)
+    if (index < 0) return
+    let tabs = state.tabs.filter((tab) => tab.id !== id)
+    if (!tabs.length) tabs = [createTab(uid(), 'Tab 1')]
+    const activeId = state.activeId === id ? tabs[Math.max(0, index - 1)]!.id : state.activeId
+    const nextTab = tabs.find((tab) => tab.id === activeId)!
+    set({ tabs, activeId, query: nextTab.query, sortMode: nextTab.sortMode, parsed: null, errors: [], hasParsed: false, nodeCount: 0, results: [], matchIndex: -1, expandMap: new Map() })
+    persist(tabs, activeId, state.indentSize)
+    if (state.activeId === id && nextTab.input.trim()) get().format()
+  },
+  duplicateTab: (id) => {
+    const state = get()
+    const index = state.tabs.findIndex((tab) => tab.id === id)
+    if (index < 0) return
+    const source = state.tabs[index]!
+    const tab = { ...source, id: uid(), name: `${source.name} copy` }
+    const tabs = [...state.tabs.slice(0, index + 1), tab, ...state.tabs.slice(index + 1)]
+    set({ tabs, activeId: tab.id, query: tab.query, sortMode: tab.sortMode, parsed: null, errors: [], hasParsed: false, nodeCount: 0, results: [], matchIndex: -1, expandMap: new Map() })
+    persist(tabs, tab.id, state.indentSize)
+    if (tab.input.trim()) get().format()
+  },
+  renameTab: (id, name) => set((state) => {
+    const tabs = state.tabs.map((tab) => tab.id === id ? { ...tab, name } : tab)
+    persist(tabs, state.activeId, state.indentSize)
+    return { tabs }
+  }),
+  reparse: () => {
+    const state = get()
+    const input = activeTab(state).input
+    if (!input.trim()) {
+      set({ parsed: null, errors: [], hasParsed: false, nodeCount: 0, results: [], matchIndex: -1, expandMap: new Map() })
       return
     }
-    const found: SearchResult[] = []
-    const ancestors = new Set<string>()
-
-    const visit = (value: unknown, segments: PathSegment[]) => {
-      const key = segments[segments.length - 1]
-      const matchesKey = key !== undefined && String(key).toLowerCase().includes(q)
-      const matchesValue =
-        value !== null &&
-        typeof value !== 'object' &&
-        String(value).toLowerCase().includes(q)
-
-      if (matchesKey || matchesValue) {
-        found.push({ segments })
-        for (let i = 1; i < segments.length; i++) {
-          ancestors.add(pathKey(segments.slice(0, i)))
-        }
-      }
-
-      if (Array.isArray(value)) {
-        value.forEach((item, i) => visit(item, [...segments, i]))
-      } else if (value && typeof value === 'object') {
-        for (const [k, v] of Object.entries(value)) {
-          visit(v, [...segments, k])
-        }
-      }
+    const { value, errors } = validate(input)
+    if (errors.length) {
+      set({ parsed: null, errors, hasParsed: true, nodeCount: 0, results: [], matchIndex: -1 })
+      return
     }
-    visit(parsed.value, [])
-
-    results.value = found
-    matchIndex.value = found.length ? 0 : -1
-
-    // 保留用户现有的展开状态，并额外展开命中节点的祖先。
-    if (!isLargeData.value) {
-      for (const key of ancestors) expandMap.set(key, true)
-    } else {
-      // 大数据：展开全部命中祖先 + 命中自身
-      for (const key of ancestors) expandMap.set(key, true)
-      for (const r of found) {
-        for (let i = 1; i <= r.segments.length; i++) {
-          expandMap.set(pathKey(r.segments.slice(0, i)), true)
-        }
-      }
+    const nodeCount = estimateNodeCount(value)
+    const search = findSearch(value, state.query, state.expandMap, nodeCount)
+    set({ parsed: value, errors: [], hasParsed: true, nodeCount, ...search })
+  },
+  format: () => {
+    const state = get()
+    const input = activeTab(state).input
+    if (!input.trim()) {
+      get().reparse()
+      return
     }
-  }
-
-  function clearSearch() {
-    query.value = ''
-    resetSearchResults()
-  }
-
-  function resetSearchResults() {
-    results.value = []
-    matchIndex.value = -1
-  }
-
-  function nextMatch() {
-    if (matchCount.value === 0) return
-    matchIndex.value = (matchIndex.value + 1) % matchCount.value
-  }
-
-  function prevMatch() {
-    if (matchCount.value === 0) return
-    matchIndex.value =
-      (matchIndex.value - 1 + matchCount.value) % matchCount.value
-  }
-
-  function currentMatchKey(): string | null {
-    const r = results.value[matchIndex.value]
-    return r ? pathKey(r.segments) : null
-  }
-
-  // 搜索与排序设置属于当前 Tab，修改后立即写入对应标签。
-  watch(
-    [query, sortMode],
-    () => {
-      if (!restoringTabViewState) saveActiveViewState()
-    },
-    { flush: 'sync' },
-  )
-
-  // query 变化时自动重新搜索（节流由组件层做防抖）
-  watch(query, () => {
-    if (!query.value.trim()) {
-      resetSearchResults()
-    } else if (parsed.value !== null) {
-      runSearch()
+    const { value, errors } = validate(input)
+    if (errors.length) {
+      set({ parsed: null, errors, hasParsed: true, nodeCount: 0, results: [], matchIndex: -1 })
+      return
     }
-  })
+    const inputValue = beautify(value, Number(state.indentSize))
+    const tabs = state.tabs.map((tab) => tab.id === state.activeId ? { ...tab, input: inputValue } : tab)
+    const nodeCount = estimateNodeCount(value)
+    const search = findSearch(value, state.query, new Map(), nodeCount)
+    set({ tabs, parsed: value, errors: [], hasParsed: true, nodeCount, ...search })
+    persist(tabs, state.activeId, state.indentSize)
+  },
+  compress: () => {
+    const state = get()
+    const input = activeTab(state).input
+    if (!input.trim()) {
+      get().reparse()
+      return
+    }
+    const { value, errors } = validate(input)
+    if (errors.length) {
+      set({ parsed: null, errors, hasParsed: true, nodeCount: 0, results: [], matchIndex: -1 })
+      return
+    }
+    const inputValue = beautify(value, 0)
+    const tabs = state.tabs.map((tab) => tab.id === state.activeId ? { ...tab, input: inputValue } : tab)
+    const nodeCount = estimateNodeCount(value)
+    const search = findSearch(value, state.query, new Map(), nodeCount)
+    set({ tabs, parsed: value, errors: [], hasParsed: true, nodeCount, ...search })
+    persist(tabs, state.activeId, state.indentSize)
+  },
+  clearInput: () => {
+    const state = get()
+    const tabs = state.tabs.map((tab) => tab.id === state.activeId ? { ...tab, input: '', query: '' } : tab)
+    set({ tabs, query: '', parsed: null, errors: [], hasParsed: false, nodeCount: 0, results: [], matchIndex: -1, expandMap: new Map() })
+    persist(tabs, state.activeId, state.indentSize)
+  },
+  setIndentSize: (indentSize) => {
+    set({ indentSize })
+    const state = get()
+    persist(state.tabs, state.activeId, indentSize)
+  },
+  setQuery: (query) => {
+    const state = get()
+    const tabs = state.tabs.map((tab) => tab.id === state.activeId ? { ...tab, query } : tab)
+    const search = findSearch(state.parsed, query, state.expandMap, state.nodeCount)
+    set({ tabs, query, ...search })
+    persist(tabs, state.activeId, state.indentSize)
+  },
+  setSortMode: (sortMode) => set((state) => {
+    const tabs = state.tabs.map((tab) => tab.id === state.activeId ? { ...tab, sortMode } : tab)
+    persist(tabs, state.activeId, state.indentSize)
+    return { tabs, sortMode }
+  }),
+  nextMatch: () => set((state) => state.results.length ? { matchIndex: (state.matchIndex + 1) % state.results.length } : {}),
+  prevMatch: () => set((state) => state.results.length ? { matchIndex: (state.matchIndex - 1 + state.results.length) % state.results.length } : {}),
+  clearSearch: () => get().setQuery(''),
+  setExpanded: (segments, expanded) => set((state) => {
+    const expandMap = new Map(state.expandMap)
+    expandMap.set(pathKey(segments), expanded)
+    return { expandMap }
+  }),
+  toggleExpanded: (segments) => {
+    const state = get()
+    const key = pathKey(segments)
+    const current = state.expandMap.get(key) ?? true
+    get().setExpanded(segments, !current)
+  },
+  expandAll: () => set((state) => {
+    const expandMap = new Map(state.expandMap)
+    walkContainers(state.parsed, (segments) => expandMap.set(pathKey(segments), true))
+    return { expandMap }
+  }),
+  collapseAll: () => set((state) => {
+    const expandMap = new Map(state.expandMap)
+    walkContainers(state.parsed, (segments) => expandMap.set(pathKey(segments), false))
+    return { expandMap }
+  }),
+  reset: () => {
+    const tabs = [createTab('t1', 'Tab 1')]
+    set({ tabs, activeId: 't1', parsed: null, errors: [], hasParsed: false, nodeCount: 0, expandMap: new Map(), indentSize: '2', query: '', sortMode: 'asc', results: [], matchIndex: -1 })
+    persist(tabs, 't1', '2')
+  },
+}))
 
-  return {
-    // tab
-    tabs,
-    activeId,
-    activeTab,
-    activeInput,
-    setActive,
-    addTab,
-    closeTab,
-    duplicateTab,
-    renameTab,
-    // parse
-    parsed,
-    errors,
-    hasParsed,
-    nodeCount,
-    isLargeData,
-    reparse,
-    format,
-    compress,
-    clearInput,
-    // expand
-    expandMap,
-    defaultExpandDepth,
-    hasExpandedNodes,
-    baseDefaultDepth,
-    isExpanded,
-    setExpanded,
-    toggleExpanded,
-    expandAll,
-    collapseAll,
-    collapseLevel,
-    resetExpand,
-    // tool
-    indentSize,
-    sortMode,
-    // search
-    query,
-    results,
-    matchIndex,
-    matchCount,
-    matchedPathKeys,
-    runSearch,
-    clearSearch,
-    nextMatch,
-    prevMatch,
-    currentMatchKey,
-  }
-})
+export function getActiveTab(state: Pick<JsonStore, 'tabs' | 'activeId'>): Tab {
+  return activeTab(state)
+}
+
+export function getMatchedPathKeys(results: SearchResult[]): Set<string> {
+  return new Set(results.map((result) => pathKey(result.segments)))
+}
+
+export function isLargeData(nodeCount: number): boolean {
+  return nodeCount > LARGE_NODE_THRESHOLD
+}
