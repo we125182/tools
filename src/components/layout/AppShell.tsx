@@ -1,6 +1,6 @@
 import { Braces, Moon, PanelLeftClose, PanelLeftOpen, ScrollText, Sun } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
-import { NavLink, useLocation } from 'react-router-dom'
+import { NavLink, useLocation } from 'react-router'
 import { Button } from '@/components/ui/button'
 import { Tooltip } from '@/components/ui/tooltip'
 import { useJsonStore } from '@/stores/json'
