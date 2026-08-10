@@ -2,7 +2,9 @@
 
 JSON 校验、格式化、树形浏览和请求日志查看工具。
 
-技术栈：React、React Router、Zustand、Vite、TypeScript、Tailwind CSS。
+技术栈：React、React Router、Zustand、Vite、TypeScript、Tailwind CSS、Base UI（shadcn 风格封装）。
+
+页面按业务路由放在 `src/pages`，可复用交互组件位于 `src/components/ui`，其中 Button、Tooltip 与 Select 均基于 `@base-ui/react`。
 
 ## 开发
 

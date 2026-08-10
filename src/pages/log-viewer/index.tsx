@@ -1,6 +1,8 @@
 import { ChevronDown, ChevronRight, Clock3, FileJson, FileUp, Link, Trash2, Upload } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState, type DragEvent } from 'react'
-import { JsonTree, type JsonTreeController } from '@/components/json-tool/JsonTree'
+import { JsonTree, type JsonTreeController } from '@/components/json-tree/JsonTree'
+import { Button } from '@/components/ui/button'
+import { Tooltip } from '@/components/ui/tooltip'
 import { pathKey } from '@/lib/jsonc'
 import { getActiveLog, getLogs, useLogViewerStore } from '@/stores/log-viewer'
 
@@ -52,8 +54,8 @@ function LogTabBar({ importFiles }: { importFiles: (files: File[]) => Promise<vo
         {!logs.length && <p className="px-2 py-4 text-xs leading-5 text-muted-foreground">暂无日志</p>}
       </div>
       <div className="mt-2 flex items-center gap-1 border-t pt-2">
-        <button type="button" className="flex size-8 items-center justify-center rounded-md hover:bg-accent" aria-label="导入日志文件" title="导入日志文件" onClick={() => fileInput.current?.click()}><FileUp size={16} /></button>
-        <button type="button" className="flex size-8 items-center justify-center rounded-md hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50" aria-label="清空日志" title="清空日志" disabled={!logs.length} onClick={clearLogs}><Trash2 size={16} /></button>
+        <Tooltip content="导入日志文件"><Button type="button" variant="ghost" size="icon" aria-label="导入日志文件" onClick={() => fileInput.current?.click()}><FileUp size={16} /></Button></Tooltip>
+        <Tooltip content="清空日志"><Button type="button" variant="ghost" size="icon" aria-label="清空日志" disabled={!logs.length} onClick={clearLogs}><Trash2 size={16} /></Button></Tooltip>
         <input ref={fileInput} className="hidden" type="file" accept="application/json,.json,.log.json" multiple onChange={(event) => { const files = Array.from(event.target.files ?? []); event.target.value = ''; if (files.length) void importFiles(files) }} />
       </div>
     </aside>
@@ -87,7 +89,7 @@ export function LogViewerPage() {
     <main className="relative flex min-h-0 flex-1" onDragEnter={(event) => { event.preventDefault(); if (containsFiles(event)) setIsDraggingFiles(true) }} onDragOver={(event) => event.preventDefault()} onDragLeave={(event) => { if (event.currentTarget === event.target) setIsDraggingFiles(false) }} onDrop={(event) => { event.preventDefault(); setIsDraggingFiles(false); void importFiles(Array.from(event.dataTransfer.files)) }}>
       <LogTabBar importFiles={importFiles} />
       <section className="flex min-w-0 flex-1 flex-col">
-        {notice && <div className="flex items-center justify-between border-b bg-secondary px-3 py-2 text-xs"><span>{notice}</span><button type="button" className="text-muted-foreground hover:text-foreground" aria-label="关闭提示" onClick={() => setNotice(null)}>关闭</button></div>}
+        {notice && <div className="flex items-center justify-between border-b bg-secondary px-3 py-2 text-xs"><span>{notice}</span><Button type="button" variant="ghost" size="sm" className="text-muted-foreground" aria-label="关闭提示" onClick={() => setNotice(null)}>关闭</Button></div>}
         {activeLog ? <>
           <header className="flex min-h-14 shrink-0 flex-wrap items-center gap-x-4 gap-y-2 border-b px-4 py-2"><div className="flex min-w-0 flex-1 items-center gap-2"><Link className="shrink-0 text-muted-foreground" size={16} /><span className="truncate font-mono text-sm" title={activeLog.url}>{activeLog.url}</span></div><span className="flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground"><Clock3 size={14} />请求耗时 {duration}</span>{requestTime && <span className="flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground"><Clock3 size={14} />请求时间 {requestTime}</span>}</header>
           <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-2"><section data-log-payload="request" className="flex min-h-0 flex-col border-b lg:border-r lg:border-b-0"><div className="shrink-0 border-b px-3 py-2 text-xs font-medium">请求参数</div><PayloadTree value={activeLog.req ?? null} /></section><section data-log-payload="response" className="flex min-h-0 flex-col"><div className="shrink-0 border-b px-3 py-2 text-xs font-medium">响应参数</div><PayloadTree value={activeLog.res ?? null} /></section></div>

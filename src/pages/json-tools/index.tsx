@@ -1,7 +1,4 @@
 import {
-  ArrowDownAZ,
-  ArrowDownUp,
-  ArrowDownZA,
   ChevronDown,
   ChevronUp,
   CircleAlert,
@@ -14,11 +11,18 @@ import {
   X,
 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { JsonTree, type JsonTreeController } from '@/components/json-tool/JsonTree'
+import { JsonTree, type JsonTreeController } from '@/components/json-tree/JsonTree'
+import { Button } from '@/components/ui/button'
+import { Select } from '@/components/ui/select'
 import { pathKey, type JsonError, type PathSegment } from '@/lib/jsonc'
-import { getActiveTab, getMatchedPathKeys, isLargeData, useJsonStore } from '@/stores/json'
+import { getActiveTab, getMatchedPathKeys, isLargeData, type SortMode, useJsonStore } from '@/stores/json'
 
 const SNIPPET_CONTEXT = 32
+const sortOptions = [
+  { value: 'default', label: '默认' },
+  { value: 'asc', label: '升序' },
+  { value: 'desc', label: '倒序' },
+] satisfies ReadonlyArray<{ value: SortMode; label: string }>
 
 function getErrorSnippet(text: string, error: JsonError) {
   const lineStart = text.lastIndexOf('\n', Math.max(0, error.offset - 1)) + 1
@@ -110,20 +114,20 @@ export function JsonToolPage() {
                   ) : (
                     <>
                       <span className="min-w-0 flex-1 truncate" onDoubleClick={(event) => { event.stopPropagation(); setEditingId(tab.id); setEditingName(tab.name) }}>{tab.name}</span>
-                      <button className="rounded p-0.5 opacity-0 transition-opacity hover:bg-accent group-hover:opacity-100" aria-label={`关闭 ${tab.name}`} title="关闭" onClick={(event) => { event.stopPropagation(); store.closeTab(tab.id) }}><X size={12} /></button>
+                      <Button variant="ghost" size="icon-sm" className="opacity-0 group-hover:opacity-100" aria-label={`关闭 ${tab.name}`} onClick={(event) => { event.stopPropagation(); store.closeTab(tab.id) }}><X size={12} /></Button>
                     </>
                   )}
                 </div>
               ))}
-              <button type="button" className="flex h-8 w-full shrink-0 items-center justify-center rounded-md bg-accent text-muted-foreground hover:text-foreground" title="新建空白 Tab" aria-label="新建空白 Tab" onClick={store.addTab}><Plus size={16} /></button>
+              <Button type="button" variant="secondary" size="icon" className="w-full text-muted-foreground" aria-label="新建空白 Tab" onClick={store.addTab}><Plus size={16} /></Button>
             </div>
           </aside>
           <div className="flex min-w-0 flex-1 flex-col">
             <div className="flex items-center gap-2 border-b px-3 py-2">
-              <button type="button" aria-label="格式化" title="格式化" className="inline-flex h-8 items-center gap-1.5 rounded-md bg-primary px-2 text-xs font-medium text-primary-foreground hover:bg-primary/90 sm:px-3" onClick={store.format}><Wand2 size={15} /><span className="hidden sm:inline">格式化</span></button>
-              <button type="button" aria-label="压缩" title="压缩" className="inline-flex h-8 items-center gap-1.5 rounded-md border px-2 text-xs hover:bg-accent sm:px-3" onClick={store.compress}><Minimize2 size={15} /><span className="hidden sm:inline">压缩</span></button>
-              <button type="button" aria-label="校验" title="校验" className="inline-flex h-8 items-center gap-1.5 rounded-md border px-2 text-xs hover:bg-accent sm:px-3" onClick={store.reparse}><Play size={15} /><span className="hidden sm:inline">校验</span></button>
-              <button type="button" className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground" aria-label="清空" title="清空" onClick={store.clearInput}><Trash2 size={15} /></button>
+              <Button type="button" size="sm" className="px-2 sm:px-3" aria-label="格式化" onClick={store.format}><Wand2 size={15} /><span className="hidden sm:inline">格式化</span></Button>
+              <Button type="button" variant="outline" size="sm" className="px-2 sm:px-3" aria-label="压缩" onClick={store.compress}><Minimize2 size={15} /><span className="hidden sm:inline">压缩</span></Button>
+              <Button type="button" variant="outline" size="sm" className="px-2 sm:px-3" aria-label="校验" onClick={store.reparse}><Play size={15} /><span className="hidden sm:inline">校验</span></Button>
+              <Button type="button" variant="ghost" size="icon" className="text-muted-foreground" aria-label="清空" onClick={store.clearInput}><Trash2 size={15} /></Button>
               <span className="ml-auto hidden font-mono text-[11px] text-muted-foreground sm:inline">{activeTab.input.length} 字符</span>
             </div>
             <textarea
@@ -151,14 +155,10 @@ export function JsonToolPage() {
         ) : (
           <>
             <div className="flex flex-wrap items-center gap-2 border-b p-2">
-              <button type="button" className="inline-flex h-8 items-center gap-1.5 rounded-md border px-3 text-xs hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50" aria-label={expanded ? '收起全部' : '展开全部'} disabled={!showTree} onClick={expanded ? store.collapseAll : store.expandAll}>{expanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}{expanded ? '收起全部' : '展开全部'}</button>
-              <label className="sr-only" htmlFor="sort-mode">键名排序</label>
-              <div className="relative">
-                {store.sortMode === 'asc' ? <ArrowDownAZ className="pointer-events-none absolute top-2 left-2 text-muted-foreground" size={14} /> : store.sortMode === 'desc' ? <ArrowDownZA className="pointer-events-none absolute top-2 left-2 text-muted-foreground" size={14} /> : <ArrowDownUp className="pointer-events-none absolute top-2 left-2 text-muted-foreground" size={14} />}
-                <select id="sort-mode" aria-label="键名排序" className="h-8 rounded-md border bg-background pl-7 pr-2 text-xs disabled:opacity-50" value={store.sortMode} disabled={!showTree} onChange={(event) => store.setSortMode(event.target.value as 'default' | 'asc' | 'desc')}><option value="default">默认</option><option value="asc">升序</option><option value="desc">倒序</option></select>
-              </div>
-              <div className="relative min-w-36 flex-1"><Search className="pointer-events-none absolute top-2 left-2.5 text-muted-foreground" size={14} /><input value={store.query} disabled={!showTree} onChange={(event) => store.setQuery(event.target.value)} placeholder="搜索文本..." className="h-8 w-full rounded-md border bg-background pl-8 pr-8 text-xs outline-none focus:border-ring disabled:opacity-50" />{store.query && <button type="button" className="absolute top-2 right-2 text-muted-foreground hover:text-foreground" aria-label="清除搜索" onClick={store.clearSearch}><X size={14} /></button>}</div>
-              {store.query && <div className="flex items-center gap-1"><span className="rounded-md bg-secondary px-2 py-1.5 font-mono text-xs">{store.results.length ? `${store.matchIndex + 1}/${store.results.length}` : '无匹配'}</span><button type="button" className="flex size-8 items-center justify-center rounded-md hover:bg-accent disabled:opacity-50" title="上一个" aria-label="上一个" disabled={!store.results.length} onClick={store.prevMatch}><ChevronUp size={15} /></button><button type="button" className="flex size-8 items-center justify-center rounded-md hover:bg-accent disabled:opacity-50" title="下一个" aria-label="下一个" disabled={!store.results.length} onClick={store.nextMatch}><ChevronDown size={15} /></button></div>}
+              <Button type="button" variant="outline" size="sm" aria-label={expanded ? '收起全部' : '展开全部'} disabled={!showTree} onClick={expanded ? store.collapseAll : store.expandAll}>{expanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}{expanded ? '收起全部' : '展开全部'}</Button>
+              <Select aria-label="键名排序" value={store.sortMode} options={sortOptions} disabled={!showTree} onValueChange={store.setSortMode} />
+              <div className="relative min-w-36 flex-1"><Search className="pointer-events-none absolute top-2 left-2.5 text-muted-foreground" size={14} /><input value={store.query} disabled={!showTree} onChange={(event) => store.setQuery(event.target.value)} placeholder="搜索文本..." className="h-8 w-full rounded-md border bg-background pl-8 pr-8 text-xs outline-none focus:border-ring disabled:opacity-50" />{store.query && <Button type="button" variant="ghost" size="icon-sm" className="absolute top-1 right-1 text-muted-foreground" aria-label="清除搜索" onClick={store.clearSearch}><X size={14} /></Button>}</div>
+              {store.query && <div className="flex items-center gap-1"><span className="rounded-md bg-secondary px-2 py-1.5 font-mono text-xs">{store.results.length ? `${store.matchIndex + 1}/${store.results.length}` : '无匹配'}</span><Button type="button" variant="ghost" size="icon" aria-label="上一个" disabled={!store.results.length} onClick={store.prevMatch}><ChevronUp size={15} /></Button><Button type="button" variant="ghost" size="icon" aria-label="下一个" disabled={!store.results.length} onClick={store.nextMatch}><ChevronDown size={15} /></Button></div>}
             </div>
             {isLargeData(store.nodeCount) && <div className="border-b bg-amber-500/10 px-3 py-1.5 text-xs text-amber-700 dark:text-amber-400">数据较大（{store.nodeCount} 节点），大量展开节点可能影响滚动流畅度。</div>}
             <div className="min-h-0 flex-1 overflow-auto p-3"><JsonTree value={store.parsed} hasValue={showTree} controller={controller} /></div>
