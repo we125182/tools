@@ -34,7 +34,7 @@ describe('JSON Zustand store', () => {
     store.setInput('{"current":true}')
     store.reparse()
     store.setQuery('current')
-    store.setSortMode('asc')
+    store.setSortMode('default')
     store.addTab()
     store.setInput("{ name: 'Codex' }")
     store.setQuery('codex')
@@ -44,7 +44,7 @@ describe('JSON Zustand store', () => {
 
     let next = useJsonStore.getState()
     expect(next.query).toBe('current')
-    expect(next.sortMode).toBe('asc')
+    expect(next.sortMode).toBe('default')
 
     next.setActive(secondId)
     next = useJsonStore.getState()

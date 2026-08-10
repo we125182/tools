@@ -4,6 +4,7 @@ import {
   ChevronDown,
   ChevronUp,
   CircleAlert,
+  ListFilter,
   Minimize2,
   Play,
   Plus,
@@ -21,9 +22,10 @@ import { getActiveTab, getMatchedPathKeys, isLargeData, type SortMode, useJsonSt
 
 const SNIPPET_CONTEXT = 32
 const sortModes = [
+  { value: 'default', label: '默认排序', Icon: ListFilter },
   { value: 'asc', label: '按键名升序', Icon: ArrowDownAZ },
   { value: 'desc', label: '按键名降序', Icon: ArrowUpAZ },
-] satisfies ReadonlyArray<{ value: SortMode; label: string; Icon: typeof ArrowDownAZ }>
+] satisfies ReadonlyArray<{ value: SortMode; label: string; Icon: typeof ListFilter }>
 const initialSortMode = sortModes[0]!
 
 function getErrorSnippet(text: string, error: JsonError) {

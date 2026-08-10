@@ -13,9 +13,11 @@ test('switches JSON key sorting from the hover icon control', async ({ page }) =
   await page.goto('/')
   await page.locator('textarea').fill('{"z": 1, "a": 2}')
   await page.getByRole('button', { name: '校验' }).click()
+  await expect(page.locator('.json-node .text-json-key')).toHaveText(['a:', 'z:'])
 
   const sortControl = page.locator('[aria-label="键名排序"]')
   await sortControl.hover()
+  await expect(sortControl.getByRole('button', { name: '默认排序' })).toBeVisible()
   await expect(sortControl.getByRole('button', { name: '按键名升序' })).toBeVisible()
   await expect(sortControl.getByRole('button', { name: '按键名降序' })).toBeVisible()
 
