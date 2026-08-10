@@ -1,7 +1,10 @@
 import {
+  ArrowDownAZ,
+  ArrowUpAZ,
   ChevronDown,
   ChevronUp,
   CircleAlert,
+  ListFilter,
   Minimize2,
   Play,
   Plus,
@@ -13,16 +16,17 @@ import {
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { JsonTree, type JsonTreeController } from '@/components/json-tree/JsonTree'
 import { Button } from '@/components/ui/button'
-import { Select } from '@/components/ui/select'
+import { Tooltip } from '@/components/ui/tooltip'
 import { pathKey, type JsonError, type PathSegment } from '@/lib/jsonc'
 import { getActiveTab, getMatchedPathKeys, isLargeData, type SortMode, useJsonStore } from '@/stores/json'
 
 const SNIPPET_CONTEXT = 32
-const sortOptions = [
-  { value: 'default', label: '默认' },
-  { value: 'asc', label: '升序' },
-  { value: 'desc', label: '倒序' },
-] satisfies ReadonlyArray<{ value: SortMode; label: string }>
+const sortModes = [
+  { value: 'default', label: '默认排序', Icon: ListFilter },
+  { value: 'asc', label: '按键名升序', Icon: ArrowDownAZ },
+  { value: 'desc', label: '按键名降序', Icon: ArrowUpAZ },
+] satisfies ReadonlyArray<{ value: SortMode; label: string; Icon: typeof ListFilter }>
+const defaultSortMode = sortModes[0]!
 
 function getErrorSnippet(text: string, error: JsonError) {
   const lineStart = text.lastIndexOf('\n', Math.max(0, error.offset - 1)) + 1
@@ -47,6 +51,46 @@ function hasExpandedNodes(value: unknown, expandMap: Map<string, boolean>, segme
       : []
   if (!children.length || !(expandMap.get(pathKey(segments)) ?? depth < Number.POSITIVE_INFINITY)) return false
   return true
+}
+
+function SortModeControl({ value, disabled, onValueChange }: {
+  value: SortMode
+  disabled: boolean
+  onValueChange: (sortMode: SortMode) => void
+}) {
+  const activeMode = sortModes.find((mode) => mode.value === value) ?? defaultSortMode
+  const ActiveIcon = activeMode.Icon
+
+  return (
+    <div className="group relative size-8 shrink-0" aria-label="键名排序">
+      <Tooltip content={activeMode.label}>
+        <Button type="button" variant="outline" size="icon" aria-label={activeMode.label} disabled={disabled}>
+          <ActiveIcon size={15} />
+        </Button>
+      </Tooltip>
+      <div className="invisible absolute top-0 left-0 z-10 flex w-max rounded-md border bg-popover p-0.5 opacity-0 shadow-md transition-[opacity,visibility] group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100">
+        {sortModes.map((mode) => {
+          const Icon = mode.Icon
+          const selected = mode.value === value
+          return (
+            <Tooltip key={mode.value} content={mode.label}>
+              <Button
+                type="button"
+                variant={selected ? 'secondary' : 'ghost'}
+                size="icon-sm"
+                aria-label={mode.label}
+                aria-pressed={selected}
+                disabled={disabled}
+                onClick={() => onValueChange(mode.value)}
+              >
+                <Icon size={15} />
+              </Button>
+            </Tooltip>
+          )
+        })}
+      </div>
+    </div>
+  )
 }
 
 export function JsonToolPage() {
@@ -156,7 +200,7 @@ export function JsonToolPage() {
           <>
             <div className="flex flex-wrap items-center gap-2 border-b p-2">
               <Button type="button" variant="outline" size="sm" aria-label={expanded ? '收起全部' : '展开全部'} disabled={!showTree} onClick={expanded ? store.collapseAll : store.expandAll}>{expanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}{expanded ? '收起全部' : '展开全部'}</Button>
-              <Select aria-label="键名排序" value={store.sortMode} options={sortOptions} disabled={!showTree} onValueChange={store.setSortMode} />
+              <SortModeControl value={store.sortMode} disabled={!showTree} onValueChange={store.setSortMode} />
               <div className="relative min-w-36 flex-1"><Search className="pointer-events-none absolute top-2 left-2.5 text-muted-foreground" size={14} /><input value={store.query} disabled={!showTree} onChange={(event) => store.setQuery(event.target.value)} placeholder="搜索文本..." className="h-8 w-full rounded-md border bg-background pl-8 pr-8 text-xs outline-none focus:border-ring disabled:opacity-50" />{store.query && <Button type="button" variant="ghost" size="icon-sm" className="absolute top-1 right-1 text-muted-foreground" aria-label="清除搜索" onClick={store.clearSearch}><X size={14} /></Button>}</div>
               {store.query && <div className="flex items-center gap-1"><span className="rounded-md bg-secondary px-2 py-1.5 font-mono text-xs">{store.results.length ? `${store.matchIndex + 1}/${store.results.length}` : '无匹配'}</span><Button type="button" variant="ghost" size="icon" aria-label="上一个" disabled={!store.results.length} onClick={store.prevMatch}><ChevronUp size={15} /></Button><Button type="button" variant="ghost" size="icon" aria-label="下一个" disabled={!store.results.length} onClick={store.nextMatch}><ChevronDown size={15} /></Button></div>}
             </div>
