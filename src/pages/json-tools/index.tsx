@@ -26,7 +26,7 @@ const sortModes = [
   { value: 'asc', label: '按键名升序', Icon: ArrowDownAZ },
   { value: 'desc', label: '按键名降序', Icon: ArrowUpAZ },
 ] satisfies ReadonlyArray<{ value: SortMode; label: string; Icon: typeof ListFilter }>
-const initialSortMode = sortModes[0]!
+const initialSortMode = sortModes[1]!
 
 function getErrorSnippet(text: string, error: JsonError) {
   const lineStart = text.lastIndexOf('\n', Math.max(0, error.offset - 1)) + 1

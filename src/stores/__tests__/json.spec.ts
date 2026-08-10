@@ -7,6 +7,14 @@ describe('JSON Zustand store', () => {
     useJsonStore.getState().reset()
   })
 
+  it('defaults new tabs to ascending key sorting', () => {
+    expect(useJsonStore.getState().sortMode).toBe('asc')
+
+    useJsonStore.getState().addTab()
+
+    expect(useJsonStore.getState().sortMode).toBe('asc')
+  })
+
   it('compresses JavaScript object input to compact JSON', () => {
     const store = useJsonStore.getState()
     store.setInput("{ name: 'Codex', tags: [1, 2,], }")

@@ -34,7 +34,8 @@ function getEntries(value: unknown, sortMode: SortMode): Array<[string | number,
   if (Array.isArray(value)) return value.map((item, index) => [index, item])
   if (!value || typeof value !== 'object') return []
   const entries = Object.entries(value)
-  const direction = sortMode === 'desc' ? -1 : 1
+  if (sortMode === 'default') return entries
+  const direction = sortMode === 'asc' ? 1 : -1
   return entries.sort(([left], [right]) => direction * left.localeCompare(right, 'zh-Hans-CN', {
     numeric: true,
     sensitivity: 'base',

@@ -20,6 +20,11 @@ test('switches JSON key sorting from the hover icon control', async ({ page }) =
   await expect(sortControl.getByRole('button', { name: '默认排序' })).toBeVisible()
   await expect(sortControl.getByRole('button', { name: '按键名升序' })).toBeVisible()
   await expect(sortControl.getByRole('button', { name: '按键名降序' })).toBeVisible()
+  await expect(sortControl.locator('button[aria-pressed="true"]')).toHaveAccessibleName('按键名升序')
+
+  await sortControl.getByRole('button', { name: '默认排序' }).click()
+  await expect(page.locator('.json-node .text-json-key')).toHaveText(['z:', 'a:'])
+  await expect(sortControl.locator('button[aria-pressed="true"]')).toHaveAccessibleName('默认排序')
 
   await sortControl.getByRole('button', { name: '按键名降序' }).click()
   await expect(sortControl.locator('button[aria-pressed="true"]')).toHaveAccessibleName('按键名降序')

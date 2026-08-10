@@ -72,13 +72,13 @@ function uid(): string {
 }
 
 function createTab(id: string, name: string, input = ''): Tab {
-  return { id, name, input, query: '', sortMode: 'default' }
+  return { id, name, input, query: '', sortMode: 'asc' }
 }
 
 function normalizeTab(tab: Partial<Tab>): Tab {
   const sortMode: SortMode = ['default', 'asc', 'desc'].includes(tab.sortMode ?? '')
     ? tab.sortMode as SortMode
-    : 'default'
+    : 'asc'
   return {
     id: tab.id ?? uid(),
     name: tab.name ?? 'Tab',
@@ -174,7 +174,7 @@ export const useJsonStore = create<JsonStore>((set, get) => ({
   expandMap: new Map(),
   indentSize: readIndent(),
   query: initialTabs.find((tab) => tab.id === initialActiveId)?.query ?? '',
-  sortMode: initialTabs.find((tab) => tab.id === initialActiveId)?.sortMode ?? 'default',
+  sortMode: initialTabs.find((tab) => tab.id === initialActiveId)?.sortMode ?? 'asc',
   results: [],
   matchIndex: -1,
 
@@ -208,7 +208,7 @@ export const useJsonStore = create<JsonStore>((set, get) => ({
     const state = get()
     const tab = createTab(uid(), `Tab ${state.tabs.length + 1}`)
     const tabs = [...state.tabs, tab]
-    set({ tabs, activeId: tab.id, query: '', sortMode: 'default', parsed: null, errors: [], hasParsed: false, nodeCount: 0, results: [], matchIndex: -1, expandMap: new Map() })
+    set({ tabs, activeId: tab.id, query: '', sortMode: 'asc', parsed: null, errors: [], hasParsed: false, nodeCount: 0, results: [], matchIndex: -1, expandMap: new Map() })
     persist(tabs, tab.id, state.indentSize)
   },
   closeTab: (id) => {
@@ -342,7 +342,7 @@ export const useJsonStore = create<JsonStore>((set, get) => ({
   }),
   reset: () => {
     const tabs = [createTab('t1', 'Tab 1')]
-    set({ tabs, activeId: 't1', parsed: null, errors: [], hasParsed: false, nodeCount: 0, expandMap: new Map(), indentSize: '2', query: '', sortMode: 'default', results: [], matchIndex: -1 })
+    set({ tabs, activeId: 't1', parsed: null, errors: [], hasParsed: false, nodeCount: 0, expandMap: new Map(), indentSize: '2', query: '', sortMode: 'asc', results: [], matchIndex: -1 })
     persist(tabs, 't1', '2')
   },
 }))
