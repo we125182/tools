@@ -37,11 +37,10 @@ describe('LogViewer', () => {
 
     const wrapper = mount({
       components: { LogViewer, TooltipProvider },
-      template: '<TooltipProvider><LogViewer /></TooltipProvider>',
+      template: '<TooltipProvider :delay-duration="0"><LogViewer /></TooltipProvider>',
     }, {
       global: {
         plugins: [pinia],
-        stubs: { teleport: true },
       },
     })
 
@@ -57,10 +56,14 @@ describe('LogViewer', () => {
 
     const groupToggle = wrapper.get('button[aria-label="收起 current-info.log.json"]')
     expect(groupToggle.attributes('aria-expanded')).toBe('true')
-    expect(groupToggle.attributes('title')).toBe('current-info.log.json')
+    expect(groupToggle.attributes('title')).toBeUndefined()
     const group = wrapper.get('[aria-label="current-info.log.json"]')
-    expect(group.find('teleport-stub').exists()).toBe(true)
     expect(group.find('[role="tooltip"]').exists()).toBe(false)
+
+    await groupToggle.trigger('pointermove', { pointerType: 'mouse' })
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    await flushPromises()
+    expect(document.body.querySelector('[role="tooltip"]')?.textContent).toBe('current-info.log.json')
 
     await groupToggle.trigger('click')
     expect(groupToggle.attributes('aria-expanded')).toBe('false')
