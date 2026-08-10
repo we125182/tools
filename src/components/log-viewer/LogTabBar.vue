@@ -56,6 +56,7 @@ function toggleGroup(id: string) {
               class="flex h-7 w-full min-w-0 items-center gap-1.5 rounded-sm px-2 text-left text-[11px] text-muted-foreground hover:bg-background/60 hover:text-foreground"
               :aria-expanded="isGroupExpanded(group.id)"
               :aria-label="`${isGroupExpanded(group.id) ? '收起' : '展开'} ${group.name}`"
+              :title="group.name"
               @click="toggleGroup(group.id)"
             >
               <component :is="isGroupExpanded(group.id) ? ChevronDown : ChevronRight" class="size-3 shrink-0" />

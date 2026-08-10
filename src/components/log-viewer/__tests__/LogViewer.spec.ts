@@ -57,7 +57,7 @@ describe('LogViewer', () => {
 
     const groupToggle = wrapper.get('button[aria-label="收起 current-info.log.json"]')
     expect(groupToggle.attributes('aria-expanded')).toBe('true')
-    expect(groupToggle.attributes('title')).toBeUndefined()
+    expect(groupToggle.attributes('title')).toBe('current-info.log.json')
     const group = wrapper.get('[aria-label="current-info.log.json"]')
     expect(group.find('teleport-stub').exists()).toBe(true)
     expect(group.find('[role="tooltip"]').exists()).toBe(false)
