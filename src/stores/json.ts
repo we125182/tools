@@ -8,7 +8,7 @@ import {
   type PathSegment,
 } from '@/lib/jsonc'
 
-export type SortMode = 'default' | 'asc' | 'desc'
+export type SortMode = 'asc' | 'desc'
 
 export interface Tab {
   id: string
@@ -76,9 +76,8 @@ function createTab(id: string, name: string, input = ''): Tab {
 }
 
 function normalizeTab(tab: Partial<Tab>): Tab {
-  const sortMode: SortMode = ['default', 'asc', 'desc'].includes(tab.sortMode ?? '')
-    ? tab.sortMode as SortMode
-    : 'asc'
+  // Legacy tabs with the removed `default` mode fall back to ascending order.
+  const sortMode: SortMode = tab.sortMode === 'desc' ? 'desc' : 'asc'
   return {
     id: tab.id ?? uid(),
     name: tab.name ?? 'Tab',

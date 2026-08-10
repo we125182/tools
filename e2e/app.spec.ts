@@ -16,7 +16,6 @@ test('switches JSON key sorting from the hover icon control', async ({ page }) =
 
   const sortControl = page.locator('[aria-label="键名排序"]')
   await sortControl.hover()
-  await expect(sortControl.getByRole('button', { name: '默认排序' })).toBeVisible()
   await expect(sortControl.getByRole('button', { name: '按键名升序' })).toBeVisible()
   await expect(sortControl.getByRole('button', { name: '按键名降序' })).toBeVisible()
 
