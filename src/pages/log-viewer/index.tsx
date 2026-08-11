@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronRight, Clock3, FileJson, FileUp, Link, Trash2, Upload } from 'lucide-react'
+import { ChevronDown, ChevronRight, Clock3, FileJson, FileUp, Link, Trash2, Upload, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState, type DragEvent } from 'react'
 import { JsonTree, type JsonTreeController } from '@/components/json-tree/JsonTree'
 import { Button } from '@/components/ui/button'
@@ -67,6 +67,11 @@ export function LogViewerPage() {
   const activeLog = getActiveLog(groups, activeId)
   const [isDraggingFiles, setIsDraggingFiles] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
+  useEffect(() => {
+    if (!notice) return
+    const timeout = window.setTimeout(() => setNotice(null), 3000)
+    return () => window.clearTimeout(timeout)
+  }, [notice])
   const importFiles = async (files: File[]) => {
     let importedCount = 0
     const failures: string[] = []
@@ -79,7 +84,8 @@ export function LogViewerPage() {
       }
     }
     const total = getLogs(useLogViewerStore.getState().groups).length
-    setNotice(failures.length ? `${importedCount ? `已导入 ${importedCount} 个文件。` : ''}${failures.join('；')}` : `已导入 ${importedCount} 个文件，共 ${total} 条请求`)
+    if (failures.length) setNotice(`${importedCount ? `已导入 ${importedCount} 个文件。` : ''}${failures.join('；')}`)
+    else if (importedCount) setNotice(`已导入 ${importedCount} 个文件，共 ${total} 条请求`)
   }
   const containsFiles = (event: DragEvent) => Array.from(event.dataTransfer.types).includes('Files')
   const duration = activeLog?.duration === undefined || activeLog?.duration === '' ? '耗时未知' : String(activeLog.duration)
@@ -89,12 +95,12 @@ export function LogViewerPage() {
     <main className="relative flex min-h-0 flex-1" onDragEnter={(event) => { event.preventDefault(); if (containsFiles(event)) setIsDraggingFiles(true) }} onDragOver={(event) => event.preventDefault()} onDragLeave={(event) => { if (event.currentTarget === event.target) setIsDraggingFiles(false) }} onDrop={(event) => { event.preventDefault(); setIsDraggingFiles(false); void importFiles(Array.from(event.dataTransfer.files)) }}>
       <LogTabBar importFiles={importFiles} />
       <section className="flex min-w-0 flex-1 flex-col">
-        {notice && <div className="flex items-center justify-between border-b bg-secondary px-3 py-2 text-xs"><span>{notice}</span><Button type="button" variant="ghost" size="sm" className="text-muted-foreground" aria-label="关闭提示" onClick={() => setNotice(null)}>关闭</Button></div>}
         {activeLog ? <>
           <header className="flex min-h-14 shrink-0 flex-wrap items-center gap-x-4 gap-y-2 border-b px-4 py-2"><div className="flex min-w-0 flex-1 items-center gap-2"><Link className="shrink-0 text-muted-foreground" size={16} /><span className="truncate font-mono text-sm" title={activeLog.url}>{activeLog.url}</span></div><span className="flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground"><Clock3 size={14} />请求耗时 {duration}</span>{requestTime && <span className="flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground"><Clock3 size={14} />请求时间 {requestTime}</span>}</header>
           <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-2"><section data-log-payload="request" className="flex min-h-0 flex-col border-b lg:border-r lg:border-b-0"><div className="shrink-0 border-b px-3 py-2 text-xs font-medium">请求参数</div><PayloadTree value={activeLog.req ?? null} /></section><section data-log-payload="response" className="flex min-h-0 flex-col"><div className="shrink-0 border-b px-3 py-2 text-xs font-medium">响应参数</div><PayloadTree value={activeLog.res ?? null} /></section></div>
         </> : <div className="flex min-h-0 flex-1 items-center justify-center text-sm text-muted-foreground">导入日志文件后查看请求详情</div>}
       </section>
+      {notice && <div role="status" className="fixed top-4 right-4 z-30 flex max-w-[calc(100vw-2rem)] items-center gap-2 rounded-md border bg-popover px-3 py-2 text-sm text-popover-foreground shadow-lg"><span>{notice}</span><Button type="button" variant="ghost" size="icon-sm" className="shrink-0 text-muted-foreground" aria-label="关闭提示" onClick={() => setNotice(null)}><X size={14} /></Button></div>}
       {isDraggingFiles && <div className="absolute inset-0 z-20 flex items-center justify-center border-2 border-dashed border-primary bg-background/90"><div className="flex items-center gap-2 text-sm font-medium"><Upload size={20} />释放以导入日志文件</div></div>}
     </main>
   )

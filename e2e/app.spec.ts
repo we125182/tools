@@ -9,6 +9,21 @@ test('navigates between the JSON tool and the log viewer', async ({ page }) => {
   await expect(page.getByText('导入日志文件后查看请求详情')).toBeVisible()
 })
 
+test('shows an import success toast that closes after three seconds', async ({ page }) => {
+  await page.goto('/log-viewer')
+  const fileChooser = page.waitForEvent('filechooser')
+  await page.getByRole('button', { name: '导入日志文件' }).click()
+  await (await fileChooser).setFiles({
+    name: 'requests.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(JSON.stringify([{ url: '/api/status', req: {}, res: {} }])),
+  })
+
+  const toast = page.getByRole('status')
+  await expect(toast).toHaveText('已导入 1 个文件，共 1 条请求')
+  await expect(toast).toBeHidden({ timeout: 3500 })
+})
+
 test('switches JSON key sorting from the hover icon control', async ({ page }) => {
   await page.goto('/')
   await page.locator('textarea').fill('{"z": 1, "a": 2}')
