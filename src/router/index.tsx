@@ -7,7 +7,7 @@ import { LogViewerPage } from '@/pages/log-viewer'
 export function AppRouter() {
   return (
     <TooltipProvider>
-      <BrowserRouter>
+      <BrowserRouter basename={import.meta.env.BASE_URL}>
         <AppShell>
           <Routes>
             <Route path="/json-tools" element={<JsonToolPage />} />

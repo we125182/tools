@@ -22,3 +22,11 @@ pnpm test:unit
 pnpm build
 pnpm test:e2e
 ```
+
+## GitHub Pages
+
+仓库已包含 `.github/workflows/deploy-pages.yml`。推送到 `main` 后，GitHub Actions 会构建并发布应用到仓库 Pages 地址，例如 `https://<用户名>.github.io/<仓库名>/`。
+
+首次启用时，在 GitHub 仓库的 **Settings > Pages > Build and deployment** 中选择 **GitHub Actions** 作为 Source。工作流会根据仓库名设置资源前缀，根路径和 `/log-viewer` 的直接访问都会正常工作。
+
+默认发布分支为 `main`。若使用自定义域名，在工作流的构建步骤将 `BASE_PATH` 改为 `/`；若使用其他分支，同步修改工作流的 `on.push.branches`。

@@ -1,11 +1,26 @@
+import { copyFileSync } from 'node:fs'
 import { fileURLToPath, URL } from 'node:url'
+import { resolve } from 'node:path'
 
 import { defineConfig } from 'vite'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
+const base = process.env.BASE_PATH ?? '/'
+const normalizedBase = base.endsWith('/') ? base : `${base}/`
+
+function githubPagesFallback() {
+  return {
+    name: 'github-pages-fallback',
+    closeBundle() {
+      copyFileSync(resolve('dist/index.html'), resolve('dist/404.html'))
+    },
+  }
+}
+
 // https://vite.dev/config/
 export default defineConfig({
+  base: normalizedBase,
   plugins: [
     tailwindcss(),
     VitePWA({
@@ -18,8 +33,8 @@ export default defineConfig({
         theme_color: '#0f766e',
         background_color: '#ffffff',
         display: 'standalone',
-        start_url: '/json-tools',
-        scope: '/',
+        start_url: normalizedBase,
+        scope: normalizedBase,
         icons: [
           {
             src: 'pwa-192x192.png',
@@ -42,6 +57,7 @@ export default defineConfig({
         ],
       },
     }),
+    githubPagesFallback(),
   ],
   resolve: {
     alias: {
