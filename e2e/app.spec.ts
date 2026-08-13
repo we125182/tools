@@ -1,12 +1,26 @@
 import { expect, test } from '@playwright/test'
 
-test('navigates between the JSON tool and the log viewer', async ({ page }) => {
+test('navigates between the JSON tool, log viewer, and todo tasks', async ({ page }) => {
   await page.goto('/')
   await expect(page.locator('h1')).toHaveText('JSON Tools')
 
   await page.getByRole('link', { name: 'Log Viewer' }).click()
   await expect(page.locator('h1')).toHaveText('Log Viewer')
   await expect(page.getByText('导入日志文件后查看请求详情')).toBeVisible()
+
+  await page.getByRole('link', { name: '代办任务' }).click()
+  await expect(page.locator('h1')).toHaveText('代办任务')
+  await expect(page.getByText('还没有任务')).toBeVisible()
+})
+
+test('adds a quick task and switches it to the status board', async ({ page }) => {
+  await page.goto('/todos')
+  await page.getByRole('textbox', { name: '任务内容' }).fill('确认发布计划')
+  await page.getByRole('button', { name: '添加任务' }).click()
+  await expect(page.getByText('确认发布计划')).toBeVisible()
+
+  await page.getByRole('button', { name: '看板视图' }).click()
+  await expect(page.getByRole('region', { name: '未开始' }).getByText('确认发布计划')).toBeVisible()
 })
 
 test('shows an import success toast that closes after three seconds', async ({ page }) => {

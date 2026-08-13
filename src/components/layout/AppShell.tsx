@@ -1,19 +1,22 @@
-import { Braces, Moon, PanelLeftClose, PanelLeftOpen, ScrollText, Sun } from 'lucide-react'
+import { Braces, ListTodo, Moon, PanelLeftClose, PanelLeftOpen, ScrollText, Sun } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
 import { NavLink, useLocation } from 'react-router'
 import { Button } from '@/components/ui/button'
 import { Tooltip } from '@/components/ui/tooltip'
 import { useJsonStore } from '@/stores/json'
 
-type Feature = 'json-tools' | 'log-viewer'
+type Feature = 'json-tools' | 'log-viewer' | 'todos'
 
 const features: Array<{ feature: Feature; label: string; path: string }> = [
   { feature: 'json-tools', label: 'JSON Tools', path: '/json-tools' },
   { feature: 'log-viewer', label: 'Log Viewer', path: '/log-viewer' },
+  { feature: 'todos', label: '代办任务', path: '/todos' },
 ]
 
 function FeatureIcon({ feature }: { feature: Feature }) {
-  return feature === 'json-tools' ? <Braces size={16} /> : <ScrollText size={16} />
+  if (feature === 'json-tools') return <Braces size={16} />
+  if (feature === 'log-viewer') return <ScrollText size={16} />
+  return <ListTodo size={16} />
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -21,7 +24,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [collapsed, setCollapsed] = useState(true)
   const [isDark, setIsDark] = useState(() => localStorage.getItem('jt:theme') === 'true')
   const reparse = useJsonStore((state) => state.reparse)
-  const activeFeature: Feature = location.pathname.startsWith('/log-viewer') ? 'log-viewer' : 'json-tools'
+  const activeFeature: Feature = location.pathname.startsWith('/log-viewer') ? 'log-viewer' : location.pathname.startsWith('/todos') ? 'todos' : 'json-tools'
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', isDark)
@@ -32,8 +35,8 @@ export function AppShell({ children }: { children: ReactNode }) {
     reparse()
   }, [reparse])
 
-  const title = activeFeature === 'json-tools' ? 'JSON Tools' : 'Log Viewer'
-  const subtitle = activeFeature === 'json-tools' ? '校验 · 格式化 · 浏览' : '请求 · 响应 · JSON 浏览'
+  const title = activeFeature === 'json-tools' ? 'JSON Tools' : activeFeature === 'log-viewer' ? 'Log Viewer' : '代办任务'
+  const subtitle = activeFeature === 'json-tools' ? '校验 · 格式化 · 浏览' : activeFeature === 'log-viewer' ? '请求 · 响应 · JSON 浏览' : '任务 · 截止时间 · 提醒'
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-background text-foreground">

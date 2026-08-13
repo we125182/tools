@@ -1,4 +1,4 @@
-import { app, BrowserWindow, clipboard, ipcMain } from 'electron'
+import { app, BrowserWindow, clipboard, ipcMain, Notification } from 'electron'
 import { join } from 'node:path'
 
 const isDevelopment = process.argv.includes('--dev')
@@ -35,6 +35,10 @@ app.whenReady().then(() => {
   ipcMain.handle('clipboard:write-text', (_event, text: unknown) => {
     if (typeof text !== 'string') throw new TypeError('Clipboard text must be a string.')
     clipboard.writeText(text)
+  })
+  ipcMain.handle('notification:show', (_event, title: unknown, body: unknown) => {
+    if (typeof title !== 'string' || typeof body !== 'string') throw new TypeError('Notification content must be strings.')
+    if (Notification.isSupported()) new Notification({ title, body }).show()
   })
 
   createWindow()

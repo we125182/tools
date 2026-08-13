@@ -3,6 +3,7 @@ import { AppShell } from '@/components/layout/AppShell'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { JsonToolPage } from '@/pages/json-tools'
 import { LogViewerPage } from '@/pages/log-viewer'
+import { TodoPage } from '@/pages/todos'
 
 export function AppRouter() {
   const isElectron = Boolean(window.electronAPI)
@@ -15,6 +16,7 @@ export function AppRouter() {
           <Routes>
             <Route path="/json-tools" element={<JsonToolPage />} />
             <Route path="/log-viewer" element={<LogViewerPage />} />
+            <Route path="/todos" element={<TodoPage />} />
             <Route path="*" element={<Navigate to="/json-tools" replace />} />
           </Routes>
         </AppShell>
