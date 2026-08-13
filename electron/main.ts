@@ -1,8 +1,9 @@
-import { app, BrowserWindow, clipboard, globalShortcut, ipcMain, Notification } from 'electron'
+import { app, BrowserWindow, clipboard, globalShortcut, ipcMain, Notification, screen } from 'electron'
 import { join } from 'node:path'
 
 const isDevelopment = process.argv.includes('--dev')
 const developmentServerUrl = 'http://127.0.0.1:5173'
+let quickTodoWindow: BrowserWindow | null = null
 
 function loadWindow(window: BrowserWindow, hash?: string) {
   if (isDevelopment) {
@@ -38,6 +39,13 @@ function createWindow() {
   loadWindow(window)
 }
 
+function positionQuickTodoWindow(window: BrowserWindow) {
+  const display = screen.getDisplayNearestPoint(screen.getCursorScreenPoint())
+  const [width] = window.getSize()
+  const { x, y, width: workAreaWidth } = display.workArea
+  window.setPosition(x + workAreaWidth - width, y)
+}
+
 function createQuickTodoWindow() {
   const window = new BrowserWindow({
     width: 620,
@@ -46,6 +54,7 @@ function createQuickTodoWindow() {
     minHeight: 480,
     title: '代办任务',
     show: false,
+    alwaysOnTop: true,
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
@@ -54,9 +63,32 @@ function createQuickTodoWindow() {
     },
   })
 
-  window.once('ready-to-show', () => window.show())
+  quickTodoWindow = window
+  window.once('ready-to-show', () => {
+    positionQuickTodoWindow(window)
+    window.show()
+  })
+  window.on('closed', () => {
+    if (quickTodoWindow === window) quickTodoWindow = null
+  })
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
   loadWindow(window, '/todos/quick')
+}
+
+function toggleQuickTodoWindow() {
+  if (!quickTodoWindow || quickTodoWindow.isDestroyed()) {
+    createQuickTodoWindow()
+    return
+  }
+
+  if (quickTodoWindow.isVisible()) {
+    quickTodoWindow.hide()
+    return
+  }
+
+  positionQuickTodoWindow(quickTodoWindow)
+  quickTodoWindow.show()
+  quickTodoWindow.focus()
 }
 
 app.whenReady().then(() => {
@@ -70,7 +102,7 @@ app.whenReady().then(() => {
   })
 
   createWindow()
-  globalShortcut.register('Control+N', createQuickTodoWindow)
+  globalShortcut.register('Control+N', toggleQuickTodoWindow)
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
