@@ -64,7 +64,7 @@ function SortModeControl({ value, disabled, onValueChange }: {
   return (
     <div className="group relative size-8 shrink-0" aria-label="键名排序">
       <Tooltip content={activeMode.label}>
-        <Button type="button" variant="outline" size="icon" aria-label={activeMode.label} disabled={disabled}>
+        <Button type="button" variant="outline" size="icon" aria-label="切换键名排序" disabled={disabled}>
           <ActiveIcon size={15} />
         </Button>
       </Tooltip>

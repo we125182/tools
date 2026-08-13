@@ -65,6 +65,10 @@ function HighlightedText({ text, query }: { text: string; query: string }) {
 }
 
 async function copyText(text: string) {
+  if (window.electronAPI) {
+    await window.electronAPI.writeClipboard(text)
+    return
+  }
   await navigator.clipboard?.writeText(text)
 }
 

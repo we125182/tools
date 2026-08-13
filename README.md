@@ -15,6 +15,18 @@ pnpm dev
 
 默认访问地址为 `http://localhost:5173`。JSON 工具位于 `/json-tools`，日志查看器位于 `/log-viewer`。
 
+## Electron 桌面端
+
+```sh
+# 启动 Vite 与 Electron 开发窗口
+pnpm dev:electron
+
+# 构建当前系统的安装包
+pnpm build:electron
+```
+
+安装包输出至 `release/`。构建 Electron 时会使用相对资源路径，并不会注册 PWA Service Worker；Web 和 GitHub Pages 构建行为保持不变。
+
 ## 验证
 
 ```sh
