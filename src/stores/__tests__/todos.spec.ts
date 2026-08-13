@@ -14,7 +14,7 @@ describe('todo Zustand store', () => {
       title: '整理接口文档',
       status: 'not-started',
       dueAt: null,
-      priority: 'none',
+      priority: 'normal',
       notes: '',
     })
     expect(useTodoStore.getState().tasks).toHaveLength(1)
@@ -25,7 +25,7 @@ describe('todo Zustand store', () => {
       title: '发布版本',
       status: 'in-progress',
       dueAt: '2026-08-13T10:00',
-      priority: 'high',
+      priority: 'urgent',
       notes: '确认变更记录',
     })!
     useTodoStore.getState().markDueNotified(task.id)
@@ -34,7 +34,7 @@ describe('todo Zustand store', () => {
 
     expect(useTodoStore.getState().tasks[0]).toMatchObject({
       status: 'in-progress',
-      priority: 'high',
+      priority: 'urgent',
       notes: '确认变更记录',
       notifiedAt: null,
     })
@@ -48,5 +48,13 @@ describe('todo Zustand store', () => {
 
     expect(getDueTasks(useTodoStore.getState().tasks, new Date('2026-08-13T10:00').getTime()).map((task) => task.id)).toEqual([overdue.id])
     expect(completed.id).toBeTruthy()
+  })
+
+  it('migrates legacy priority values to normal or urgent', () => {
+    const normal = useTodoStore.getState().addTask({ title: '普通任务', priority: 'low' as never })
+    const urgent = useTodoStore.getState().addTask({ title: '紧急任务', priority: 'high' as never })
+
+    expect(normal?.priority).toBe('normal')
+    expect(urgent?.priority).toBe('urgent')
   })
 })

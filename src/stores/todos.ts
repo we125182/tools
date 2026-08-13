@@ -3,7 +3,7 @@ import { create } from 'zustand'
 export const todoStatuses = ['not-started', 'in-progress', 'completed'] as const
 export type TodoStatus = typeof todoStatuses[number]
 
-export const todoPriorities = ['none', 'low', 'medium', 'high'] as const
+export const todoPriorities = ['normal', 'urgent'] as const
 export type TodoPriority = typeof todoPriorities[number]
 
 export interface TodoTask {
@@ -45,8 +45,8 @@ function isStatus(value: unknown): value is TodoStatus {
   return typeof value === 'string' && todoStatuses.includes(value as TodoStatus)
 }
 
-function isPriority(value: unknown): value is TodoPriority {
-  return typeof value === 'string' && todoPriorities.includes(value as TodoPriority)
+function normalizePriority(value: unknown): TodoPriority {
+  return value === 'urgent' || value === 'high' ? 'urgent' : 'normal'
 }
 
 function normalizeDueAt(value: unknown): string | null {
@@ -64,7 +64,7 @@ function normalizeTask(value: Partial<TodoTask>): TodoTask | null {
     title,
     status: isStatus(value.status) ? value.status : 'not-started',
     dueAt: normalizeDueAt(value.dueAt),
-    priority: isPriority(value.priority) ? value.priority : 'none',
+    priority: normalizePriority(value.priority),
     notes: typeof value.notes === 'string' ? value.notes : '',
     createdAt: typeof value.createdAt === 'string' ? value.createdAt : now,
     updatedAt: typeof value.updatedAt === 'string' ? value.updatedAt : now,
@@ -100,7 +100,7 @@ function createTask(input: TodoTaskInput): TodoTask | null {
     title,
     status: isStatus(input.status) ? input.status : 'not-started',
     dueAt: normalizeDueAt(input.dueAt),
-    priority: isPriority(input.priority) ? input.priority : 'none',
+    priority: normalizePriority(input.priority),
     notes: input.notes ?? '',
     createdAt: now,
     updatedAt: now,
@@ -132,7 +132,7 @@ export const useTodoStore = create<TodoStore>((set) => ({
       const title = input.title === undefined ? task.title : input.title.trim() || task.title
       const dueAt = input.dueAt === undefined ? task.dueAt : normalizeDueAt(input.dueAt)
       const status = input.status === undefined ? task.status : isStatus(input.status) ? input.status : task.status
-      const priority = input.priority === undefined ? task.priority : isPriority(input.priority) ? input.priority : task.priority
+      const priority = input.priority === undefined ? task.priority : normalizePriority(input.priority)
       const dueChanged = dueAt !== task.dueAt
       const reopened = task.status === 'completed' && status !== 'completed'
       return {

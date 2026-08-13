@@ -15,9 +15,9 @@ import {
   Trash2,
   X,
 } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState, type DragEvent } from 'react'
 import { Button } from '@/components/ui/button'
-import { Select, type SelectOption } from '@/components/ui/select'
+import { RadioGroup, type RadioOption } from '@/components/ui/radio-group'
 import { Tooltip } from '@/components/ui/tooltip'
 import { notifyTaskDue, requestTaskNotificationPermission } from '@/lib/task-notifications'
 import {
@@ -35,20 +35,16 @@ const statusOptions = [
   { value: 'not-started', label: '未开始' },
   { value: 'in-progress', label: '进行中' },
   { value: 'completed', label: '已完成' },
-] satisfies ReadonlyArray<SelectOption<TodoStatus>>
+] satisfies ReadonlyArray<RadioOption<TodoStatus>>
 
 const priorityOptions = [
-  { value: 'none', label: '无优先级' },
-  { value: 'low', label: '低优先级' },
-  { value: 'medium', label: '中优先级' },
-  { value: 'high', label: '高优先级' },
-] satisfies ReadonlyArray<SelectOption<TodoPriority>>
+  { value: 'normal', label: '普通' },
+  { value: 'urgent', label: '紧急' },
+] satisfies ReadonlyArray<RadioOption<TodoPriority>>
 
 const priorityStyle: Record<TodoPriority, string> = {
-  none: 'text-muted-foreground',
-  low: 'text-sky-700 dark:text-sky-300',
-  medium: 'text-amber-700 dark:text-amber-300',
-  high: 'text-rose-700 dark:text-rose-300',
+  normal: 'text-muted-foreground',
+  urgent: 'text-destructive',
 }
 
 function statusLabel(status: TodoStatus): string {
@@ -56,7 +52,7 @@ function statusLabel(status: TodoStatus): string {
 }
 
 function priorityLabel(priority: TodoPriority): string {
-  return priorityOptions.find((option) => option.value === priority)?.label ?? '无优先级'
+  return priorityOptions.find((option) => option.value === priority)?.label ?? '普通'
 }
 
 function StatusIcon({ status, size = 16 }: { status: TodoStatus; size?: number }) {
@@ -88,14 +84,14 @@ function TaskComposer() {
   const [showDetails, setShowDetails] = useState(false)
   const [status, setStatus] = useState<TodoStatus>('not-started')
   const [dueAt, setDueAt] = useState('')
-  const [priority, setPriority] = useState<TodoPriority>('none')
+  const [priority, setPriority] = useState<TodoPriority>('normal')
   const [notes, setNotes] = useState('')
 
   const reset = () => {
     setTitle('')
     setStatus('not-started')
     setDueAt('')
-    setPriority('none')
+    setPriority('normal')
     setNotes('')
     setShowDetails(false)
   }
@@ -123,17 +119,29 @@ function TaskComposer() {
         </Tooltip>
         <Button type="submit" size="icon" aria-label="添加任务" disabled={!title.trim()}><Plus size={18} /></Button>
       </div>
-      {showDetails && <div className="mt-3 grid gap-3 border-t pt-3 sm:grid-cols-2 lg:grid-cols-4">
-        <label className="grid gap-1.5 text-xs text-muted-foreground">状态<Select value={status} options={statusOptions} onValueChange={setStatus} aria-label="新任务状态" /></label>
-        <label className="grid gap-1.5 text-xs text-muted-foreground">截止时间<input type="datetime-local" value={dueAt} onChange={(event) => setDueAt(event.target.value)} className="h-8 rounded-md border bg-background px-2 text-xs text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="新任务截止时间" /></label>
-        <label className="grid gap-1.5 text-xs text-muted-foreground">优先级<Select value={priority} options={priorityOptions} onValueChange={setPriority} aria-label="新任务优先级" /></label>
-        <label className="grid gap-1.5 text-xs text-muted-foreground sm:col-span-2 lg:col-span-1">备注<input value={notes} onChange={(event) => setNotes(event.target.value)} className="h-8 rounded-md border bg-background px-2 text-xs text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="新任务备注" /></label>
+      {showDetails && <div className="mt-3 grid items-start gap-3 border-t pt-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-1.5 self-start text-xs text-muted-foreground"><span>状态</span><RadioGroup value={status} options={statusOptions} onValueChange={setStatus} aria-label="新任务状态" /></div>
+        <label className="grid gap-1.5 self-start text-xs text-muted-foreground">截止时间<input type="datetime-local" value={dueAt} onChange={(event) => setDueAt(event.target.value)} className="h-8 rounded-md border bg-background px-2 text-xs text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="新任务截止时间" /></label>
+        <div className="grid gap-1.5 self-start text-xs text-muted-foreground"><span>优先级</span><RadioGroup value={priority} options={priorityOptions} onValueChange={setPriority} aria-label="新任务优先级" /></div>
+        <label className="grid gap-1.5 self-start text-xs text-muted-foreground sm:col-span-2 lg:col-span-1">备注<input value={notes} onChange={(event) => setNotes(event.target.value)} className="h-8 rounded-md border bg-background px-2 text-xs text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="新任务备注" /></label>
       </div>}
     </form>
   )
 }
 
-function TaskCard({ task, compact = false }: { task: TodoTask; compact?: boolean }) {
+function TaskCard({
+  task,
+  compact = false,
+  draggable = false,
+  onDragStart,
+  onDragEnd,
+}: {
+  task: TodoTask
+  compact?: boolean
+  draggable?: boolean
+  onDragStart?: (taskId: string) => void
+  onDragEnd?: () => void
+}) {
   const updateTask = useTodoStore((state) => state.updateTask)
   const deleteTask = useTodoStore((state) => state.deleteTask)
   const [editing, setEditing] = useState(false)
@@ -141,11 +149,21 @@ function TaskCard({ task, compact = false }: { task: TodoTask; compact?: boolean
   const nextStatus = task.status === 'completed' ? 'not-started' : 'completed'
 
   return (
-    <article className={`rounded-md border bg-card p-3 ${task.status === 'completed' ? 'opacity-65' : ''}`}>
+    <article
+      draggable={draggable}
+      className={`rounded-md border bg-card p-3 ${task.status === 'completed' ? 'opacity-65' : ''} ${draggable ? 'cursor-grab active:cursor-grabbing' : ''}`}
+      onDragStart={(event) => {
+        if (!draggable) return
+        event.dataTransfer.effectAllowed = 'move'
+        event.dataTransfer.setData('text/plain', task.id)
+        onDragStart?.(task.id)
+      }}
+      onDragEnd={onDragEnd}
+    >
       <div className="flex items-start gap-2">
         <Tooltip content={task.status === 'completed' ? '标记为未开始' : '标记为已完成'}>
-          <Button type="button" variant="ghost" size="icon-sm" className={`mt-0.5 shrink-0 ${task.status === 'completed' ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}`} aria-label={`${task.status === 'completed' ? '标记为未开始' : '标记为已完成'}：${task.title}`} onClick={() => updateTask(task.id, { status: nextStatus })}>
-            {task.status === 'completed' ? <Check size={15} /> : <Circle size={15} />}
+          <Button type="button" variant="ghost" size="icon-sm" className={`size-5 shrink-0 ${task.status === 'completed' ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}`} aria-label={`${task.status === 'completed' ? '标记为未开始' : '标记为已完成'}：${task.title}`} onClick={() => updateTask(task.id, { status: nextStatus })}>
+            {task.status === 'completed' ? <Check size={14} /> : <Circle size={14} />}
           </Button>
         </Tooltip>
         <div className="min-w-0 flex-1">
@@ -160,11 +178,11 @@ function TaskCard({ task, compact = false }: { task: TodoTask; compact?: boolean
         </div>
       </div>
       {compact && <TaskMeta task={task} overdue={overdue} />}
-      {editing && <div className="mt-3 grid gap-3 border-t pt-3 sm:grid-cols-2">
+      {editing && <div className="mt-3 grid items-start gap-3 border-t pt-3 sm:grid-cols-2">
         <label className="grid gap-1.5 text-xs text-muted-foreground sm:col-span-2">任务内容<input defaultValue={task.title} onBlur={(event) => updateTask(task.id, { title: event.target.value })} className="h-8 rounded-md border bg-background px-2 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label={`${task.title} 的任务内容`} /></label>
-        <label className="grid gap-1.5 text-xs text-muted-foreground">状态<Select value={task.status} options={statusOptions} onValueChange={(status) => updateTask(task.id, { status })} aria-label={`${task.title} 的状态`} /></label>
+        <div className="grid gap-1.5 self-start text-xs text-muted-foreground"><span>状态</span><RadioGroup value={task.status} options={statusOptions} onValueChange={(status) => updateTask(task.id, { status })} aria-label={`${task.title} 的状态`} /></div>
         <label className="grid gap-1.5 text-xs text-muted-foreground">截止时间<input type="datetime-local" value={toDatetimeLocal(task.dueAt)} onChange={(event) => updateTask(task.id, { dueAt: event.target.value || null })} className="h-8 rounded-md border bg-background px-2 text-xs text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label={`${task.title} 的截止时间`} /></label>
-        <label className="grid gap-1.5 text-xs text-muted-foreground">优先级<Select value={task.priority} options={priorityOptions} onValueChange={(priority) => updateTask(task.id, { priority })} aria-label={`${task.title} 的优先级`} /></label>
+        <div className="grid gap-1.5 self-start text-xs text-muted-foreground"><span>优先级</span><RadioGroup value={task.priority} options={priorityOptions} onValueChange={(priority) => updateTask(task.id, { priority })} aria-label={`${task.title} 的优先级`} /></div>
         <label className="grid gap-1.5 text-xs text-muted-foreground">备注<textarea defaultValue={task.notes} onBlur={(event) => updateTask(task.id, { notes: event.target.value })} className="min-h-16 resize-y rounded-md border bg-background px-2 py-1.5 text-xs text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label={`${task.title} 的备注`} /></label>
       </div>}
     </article>
@@ -174,7 +192,7 @@ function TaskCard({ task, compact = false }: { task: TodoTask; compact?: boolean
 function TaskMeta({ task, overdue }: { task: TodoTask; overdue: boolean }) {
   return <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
     {task.dueAt && <span className={`flex items-center gap-1 ${overdue ? 'font-medium text-destructive' : ''}`}><CalendarClock size={12} />{overdue ? '已到期 ' : ''}{formatDueAt(task.dueAt)}</span>}
-    {task.priority !== 'none' && <span className={`flex items-center gap-1 ${priorityStyle[task.priority]}`}><Circle size={8} fill="currentColor" />{priorityLabel(task.priority)}</span>}
+    <span className={`flex items-center gap-1 ${priorityStyle[task.priority]}`}><Circle size={8} fill="currentColor" />{priorityLabel(task.priority)}</span>
     {task.notes && <span className="max-w-full truncate" title={task.notes}>{task.notes}</span>}
   </div>
 }
@@ -189,11 +207,37 @@ function ListView({ tasks }: { tasks: TodoTask[] }) {
 }
 
 function BoardView({ tasks }: { tasks: TodoTask[] }) {
+  const updateTask = useTodoStore((state) => state.updateTask)
+  const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null)
+  const [dropTarget, setDropTarget] = useState<TodoStatus | null>(null)
   const columns = todoStatuses.map((status) => ({ status, tasks: tasks.filter((task) => task.status === status) }))
+
+  const dropTask = (event: DragEvent<HTMLElement>, status: TodoStatus) => {
+    event.preventDefault()
+    const taskId = event.dataTransfer.getData('text/plain') || draggingTaskId
+    const task = tasks.find((item) => item.id === taskId)
+    if (task && task.status !== status) updateTask(task.id, { status })
+    setDraggingTaskId(null)
+    setDropTarget(null)
+  }
+
   return <div className="min-h-0 flex-1 overflow-auto p-4 sm:p-6"><div className="mx-auto grid min-w-[780px] max-w-7xl grid-cols-3 gap-4">
-    {columns.map((column) => <section key={column.status} className="flex min-h-52 flex-col rounded-md border bg-muted/25 p-2.5" aria-label={statusLabel(column.status)}>
+    {columns.map((column) => <section
+      key={column.status}
+      className={`flex min-h-52 flex-col rounded-md border p-2.5 transition-colors ${dropTarget === column.status ? 'border-primary bg-primary/5' : 'bg-muted/25'}`}
+      aria-label={statusLabel(column.status)}
+      onDragOver={(event) => {
+        event.preventDefault()
+        event.dataTransfer.dropEffect = 'move'
+      }}
+      onDragEnter={() => setDropTarget(column.status)}
+      onDragLeave={(event) => {
+        if (event.currentTarget === event.target) setDropTarget(null)
+      }}
+      onDrop={(event) => dropTask(event, column.status)}
+    >
       <header className="mb-2 flex items-center gap-2 px-1 text-sm font-medium"><StatusIcon status={column.status} size={15} /><span>{statusLabel(column.status)}</span><span className="ml-auto font-mono text-xs text-muted-foreground">{column.tasks.length}</span></header>
-      <div className="flex flex-col gap-2">{column.tasks.map((task) => <TaskCard key={task.id} task={task} compact />)}</div>
+      <div className="min-h-20 flex-1 space-y-2">{column.tasks.map((task) => <TaskCard key={task.id} task={task} compact draggable onDragStart={setDraggingTaskId} onDragEnd={() => { setDraggingTaskId(null); setDropTarget(null) }} />)}</div>
     </section>)}
   </div></div>
 }

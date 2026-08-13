@@ -23,6 +23,16 @@ test('adds a quick task and switches it to the status board', async ({ page }) =
   await expect(page.getByRole('region', { name: '未开始' }).getByText('确认发布计划')).toBeVisible()
 })
 
+test('moves a board task into another status column', async ({ page }) => {
+  await page.goto('/todos')
+  await page.getByRole('textbox', { name: '任务内容' }).fill('拖动任务')
+  await page.getByRole('button', { name: '添加任务' }).click()
+  await page.getByRole('button', { name: '看板视图' }).click()
+
+  await page.getByRole('article').filter({ hasText: '拖动任务' }).dragTo(page.getByRole('region', { name: '进行中' }))
+  await expect(page.getByRole('region', { name: '进行中' }).getByText('拖动任务')).toBeVisible()
+})
+
 test('shows an import success toast that closes after three seconds', async ({ page }) => {
   await page.goto('/log-viewer')
   const fileChooser = page.waitForEvent('filechooser')
