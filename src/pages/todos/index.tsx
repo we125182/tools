@@ -306,3 +306,16 @@ export function TodoPage() {
     {notice && <div role="status" className="fixed top-4 right-4 z-30 flex max-w-[calc(100vw-2rem)] items-center gap-2 rounded-md border bg-popover px-3 py-2 text-sm text-popover-foreground shadow-lg"><AlarmClock size={16} className="shrink-0" /><span>{notice}</span><Button type="button" variant="ghost" size="icon-sm" className="shrink-0 text-muted-foreground" aria-label="关闭提示" onClick={() => setNotice(null)}><X size={14} /></Button></div>}
   </main>
 }
+
+export function QuickTodoPage() {
+  const tasks = useTodoStore((state) => state.tasks)
+  const orderedTasks = useMemo(() => [...tasks].sort((left, right) => {
+    if (left.status === 'completed' !== (right.status === 'completed')) return left.status === 'completed' ? 1 : -1
+    return right.updatedAt.localeCompare(left.updatedAt)
+  }), [tasks])
+
+  return <main className="flex h-screen min-h-0 flex-col bg-background text-foreground">
+    <TaskComposer />
+    <section className="min-h-0 flex-1 overflow-auto" aria-label="任务列表"><ListView tasks={orderedTasks} /></section>
+  </main>
+}
