@@ -8,7 +8,6 @@ let quickTodoWindow: BrowserWindow | null = null
 function getWindowState(window: BrowserWindow) {
   return {
     isFullscreen: window.isFullScreen(),
-    isMaximized: window.isMaximized(),
   }
 }
 
@@ -35,7 +34,8 @@ function createWindow() {
     height: 820,
     minWidth: 900,
     minHeight: 600,
-    frame: false,
+    title: 'JSON Tools',
+    frame: process.platform !== 'darwin',
     show: false,
     webPreferences: {
       contextIsolation: true,
@@ -47,8 +47,6 @@ function createWindow() {
 
   window.once('ready-to-show', () => window.show())
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
-  window.on('maximize', () => sendWindowState(window))
-  window.on('unmaximize', () => sendWindowState(window))
   window.on('enter-full-screen', () => sendWindowState(window))
   window.on('leave-full-screen', () => sendWindowState(window))
 
@@ -128,11 +126,10 @@ app.whenReady().then(() => {
   ipcMain.handle('window:minimize', (event) => {
     getEventWindow(event.sender)?.minimize()
   })
-  ipcMain.handle('window:toggle-maximize', (event) => {
+  ipcMain.handle('window:toggle-fullscreen', (event) => {
     const window = getEventWindow(event.sender)
     if (!window) return
-    if (window.isMaximized()) window.unmaximize()
-    else window.maximize()
+    window.setFullScreen(!window.isFullScreen())
   })
   ipcMain.handle('window:close', (event) => {
     getEventWindow(event.sender)?.close()

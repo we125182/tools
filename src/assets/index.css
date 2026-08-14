@@ -154,3 +154,11 @@
 .electron-titlebar-controls {
   -webkit-app-region: no-drag;
 }
+
+.mac-window-control {
+  -webkit-app-region: no-drag;
+}
+
+.mac-command-panel {
+  -webkit-app-region: no-drag;
+}

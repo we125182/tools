@@ -41,7 +41,12 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex h-screen w-screen flex-col overflow-hidden bg-background text-foreground">
-      <WindowTitleBar />
+      <WindowTitleBar
+        isDark={isDark}
+        isSidebarCollapsed={collapsed}
+        onToggleTheme={() => setIsDark((value) => !value)}
+        onToggleSidebar={() => setCollapsed((value) => !value)}
+      />
       <div className="flex min-h-0 flex-1">
         <aside
           aria-label="功能列表"
