@@ -127,6 +127,22 @@ export function WindowTitleBar({ isDark, isSidebarCollapsed, onToggleTheme, onTo
         <span>JSON Tools</span>
       </div>
 
+      <div className="electron-titlebar-controls ml-auto flex h-full shrink-0 items-center">
+        <Tooltip content="切换深色模式">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-9 w-10 rounded-none text-muted-foreground"
+            aria-label="切换深色模式"
+            aria-pressed={isDark}
+            onClick={onToggleTheme}
+          >
+            {isDark ? <Sun size={15} /> : <Moon size={15} />}
+          </Button>
+        </Tooltip>
+      </div>
+
       <div className="mac-command-panel absolute left-1/2 top-1/2 z-10 w-[min(30rem,48vw)] -translate-x-1/2 -translate-y-1/2">
         <Button
           type="button"

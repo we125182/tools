@@ -22,6 +22,7 @@ function FeatureIcon({ feature }: { feature: Feature }) {
 
 export function AppShell({ children }: { children: ReactNode }) {
   const location = useLocation()
+  const isElectron = Boolean(window.electronAPI)
   const [collapsed, setCollapsed] = useState(true)
   const [isDark, setIsDark] = useState(() => localStorage.getItem('jt:theme') === 'true')
   const reparse = useJsonStore((state) => state.reparse)
@@ -88,30 +89,32 @@ export function AppShell({ children }: { children: ReactNode }) {
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="flex h-14 shrink-0 items-center gap-3 border-b bg-background px-4">
-            <div className="flex items-center gap-2">
-              <div className="flex size-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
-                <FeatureIcon feature={activeFeature} />
+          {!isElectron && (
+            <header className="flex h-14 shrink-0 items-center gap-3 border-b bg-background px-4">
+              <div className="flex items-center gap-2">
+                <div className="flex size-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
+                  <FeatureIcon feature={activeFeature} />
+                </div>
+                <div className="leading-tight">
+                  <h1 className="text-sm font-semibold">{title}</h1>
+                  <p className="text-[11px] text-muted-foreground">{subtitle}</p>
+                </div>
               </div>
-              <div className="leading-tight">
-                <h1 className="text-sm font-semibold">{title}</h1>
-                <p className="text-[11px] text-muted-foreground">{subtitle}</p>
-              </div>
-            </div>
-            <Tooltip content="切换深色模式">
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="ml-auto rounded-full text-muted-foreground"
-                aria-label="切换深色模式"
-                aria-pressed={isDark}
-                onClick={() => setIsDark((value) => !value)}
-              >
-                {isDark ? <Moon size={14} /> : <Sun size={14} />}
-              </Button>
-            </Tooltip>
-          </header>
+              <Tooltip content="切换深色模式">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="ml-auto rounded-full text-muted-foreground"
+                  aria-label="切换深色模式"
+                  aria-pressed={isDark}
+                  onClick={() => setIsDark((value) => !value)}
+                >
+                  {isDark ? <Moon size={14} /> : <Sun size={14} />}
+                </Button>
+              </Tooltip>
+            </header>
+          )}
           {children}
         </div>
       </div>
