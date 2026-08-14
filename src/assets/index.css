@@ -145,3 +145,12 @@
   --normal-text: var(--popover-foreground);
   --normal-border: var(--border);
 }
+
+.electron-titlebar {
+  -webkit-app-region: drag;
+  user-select: none;
+}
+
+.electron-titlebar-controls {
+  -webkit-app-region: no-drag;
+}

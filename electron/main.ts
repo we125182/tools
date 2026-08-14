@@ -5,6 +5,21 @@ const isDevelopment = process.argv.includes('--dev')
 const developmentServerUrl = 'http://127.0.0.1:5173'
 let quickTodoWindow: BrowserWindow | null = null
 
+function getWindowState(window: BrowserWindow) {
+  return {
+    isFullscreen: window.isFullScreen(),
+    isMaximized: window.isMaximized(),
+  }
+}
+
+function sendWindowState(window: BrowserWindow) {
+  if (!window.isDestroyed()) window.webContents.send('window:state-changed', getWindowState(window))
+}
+
+function getEventWindow(webContents: Electron.WebContents) {
+  return BrowserWindow.fromWebContents(webContents)
+}
+
 function loadWindow(window: BrowserWindow, hash?: string) {
   if (isDevelopment) {
     void window.loadURL(`${developmentServerUrl}${hash ? `/#${hash}` : ''}`)
@@ -20,6 +35,7 @@ function createWindow() {
     height: 820,
     minWidth: 900,
     minHeight: 600,
+    frame: false,
     show: false,
     webPreferences: {
       contextIsolation: true,
@@ -31,6 +47,10 @@ function createWindow() {
 
   window.once('ready-to-show', () => window.show())
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
+  window.on('maximize', () => sendWindowState(window))
+  window.on('unmaximize', () => sendWindowState(window))
+  window.on('enter-full-screen', () => sendWindowState(window))
+  window.on('leave-full-screen', () => sendWindowState(window))
 
   if (isDevelopment) {
     window.webContents.openDevTools({ mode: 'detach' })
@@ -99,6 +119,23 @@ app.whenReady().then(() => {
   ipcMain.handle('notification:show', (_event, title: unknown, body: unknown) => {
     if (typeof title !== 'string' || typeof body !== 'string') throw new TypeError('Notification content must be strings.')
     if (Notification.isSupported()) new Notification({ title, body }).show()
+  })
+  ipcMain.handle('window:get-state', (event) => {
+    const window = getEventWindow(event.sender)
+    if (!window) throw new Error('Window not found.')
+    return getWindowState(window)
+  })
+  ipcMain.handle('window:minimize', (event) => {
+    getEventWindow(event.sender)?.minimize()
+  })
+  ipcMain.handle('window:toggle-maximize', (event) => {
+    const window = getEventWindow(event.sender)
+    if (!window) return
+    if (window.isMaximized()) window.unmaximize()
+    else window.maximize()
+  })
+  ipcMain.handle('window:close', (event) => {
+    getEventWindow(event.sender)?.close()
   })
 
   createWindow()
