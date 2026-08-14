@@ -162,3 +162,7 @@
 .mac-command-panel {
   -webkit-app-region: no-drag;
 }
+
+.command-dialog {
+  -webkit-app-region: no-drag;
+}

@@ -1,17 +1,11 @@
-import { Braces, CornerDownLeft, Maximize2, Minus, Search, X } from 'lucide-react'
+import { Braces, Maximize2, Minus, Search, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { Tooltip } from '@/components/ui/tooltip'
+import { Command, type CommandItem } from '@/components/ui/command'
 
 type WindowState = {
   isFullscreen: boolean
-}
-
-type PaletteCommand = {
-  id: string
-  label: string
-  keywords: string
-  execute: () => void
 }
 
 type WindowTitleBarProps = {
@@ -27,25 +21,19 @@ const initialWindowState: WindowState = {
 
 export function WindowTitleBar({ isDark, isSidebarCollapsed, onToggleTheme, onToggleSidebar }: WindowTitleBarProps) {
   const navigate = useNavigate()
-  const inputRef = useRef<HTMLInputElement>(null)
+  const triggerRef = useRef<HTMLInputElement>(null)
   const [windowState, setWindowState] = useState(initialWindowState)
-  const [query, setQuery] = useState('')
-  const [isOpen, setIsOpen] = useState(false)
-  const [selectedIndex, setSelectedIndex] = useState(0)
+  const [isCommandOpen, setIsCommandOpen] = useState(false)
   const controls = window.electronAPI?.windowControls
   const isMac = window.electronAPI?.platform === 'darwin'
 
-  const commands: PaletteCommand[] = [
-    { id: 'json-tools', label: '打开 JSON Tools', keywords: 'json 格式化 校验', execute: () => navigate('/json-tools') },
-    { id: 'log-viewer', label: '打开 Log Viewer', keywords: '日志 请求 响应', execute: () => navigate('/log-viewer') },
-    { id: 'todos', label: '打开代办任务', keywords: '任务 todo 待办', execute: () => navigate('/todos') },
-    { id: 'theme', label: isDark ? '切换为浅色模式' : '切换为深色模式', keywords: '主题 外观 dark light', execute: onToggleTheme },
-    { id: 'sidebar', label: isSidebarCollapsed ? '展开功能导航' : '收起功能导航', keywords: '侧栏 导航', execute: onToggleSidebar },
+  const commands: CommandItem[] = [
+    { id: 'json-tools', label: '打开 JSON Tools', keywords: 'json 格式化 校验', onSelect: () => navigate('/json-tools') },
+    { id: 'log-viewer', label: '打开 Log Viewer', keywords: '日志 请求 响应', onSelect: () => navigate('/log-viewer') },
+    { id: 'todos', label: '打开代办任务', keywords: '任务 todo 待办', onSelect: () => navigate('/todos') },
+    { id: 'theme', label: isDark ? '切换为浅色模式' : '切换为深色模式', keywords: '主题 外观 dark light', onSelect: onToggleTheme },
+    { id: 'sidebar', label: isSidebarCollapsed ? '展开功能导航' : '收起功能导航', keywords: '侧栏 导航', onSelect: onToggleSidebar },
   ]
-  const normalizedQuery = query.trim().toLocaleLowerCase()
-  const matchingCommands = normalizedQuery
-    ? commands.filter((command) => `${command.label} ${command.keywords}`.toLocaleLowerCase().includes(normalizedQuery))
-    : commands
 
   useEffect(() => {
     if (!isMac || !controls) return
@@ -71,8 +59,7 @@ export function WindowTitleBar({ isDark, isSidebarCollapsed, onToggleTheme, onTo
     const focusCommandPanel = (event: KeyboardEvent) => {
       if (!event.metaKey || event.key.toLocaleLowerCase() !== 'p') return
       event.preventDefault()
-      inputRef.current?.focus()
-      inputRef.current?.select()
+      setIsCommandOpen(true)
     }
 
     window.addEventListener('keydown', focusCommandPanel)
@@ -80,44 +67,14 @@ export function WindowTitleBar({ isDark, isSidebarCollapsed, onToggleTheme, onTo
   }, [isMac, windowState.isFullscreen])
 
   useEffect(() => {
-    setSelectedIndex(0)
-  }, [query])
+    if (windowState.isFullscreen) setIsCommandOpen(false)
+  }, [windowState.isFullscreen])
 
   if (!isMac || !controls || windowState.isFullscreen) return null
 
-  const executeCommand = (command: PaletteCommand) => {
-    command.execute()
-    setQuery('')
-    setIsOpen(false)
-    inputRef.current?.blur()
-  }
-
-  const handleCommandKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === 'Escape') {
-      setQuery('')
-      setIsOpen(false)
-      inputRef.current?.blur()
-      return
-    }
-
-    if (event.key === 'ArrowDown') {
-      event.preventDefault()
-      if (matchingCommands.length === 0) return
-      setSelectedIndex((index) => Math.min(index + 1, matchingCommands.length - 1))
-      return
-    }
-
-    if (event.key === 'ArrowUp') {
-      event.preventDefault()
-      if (matchingCommands.length === 0) return
-      setSelectedIndex((index) => Math.max(index - 1, 0))
-      return
-    }
-
-    if (event.key === 'Enter' && matchingCommands[selectedIndex]) {
-      event.preventDefault()
-      executeCommand(matchingCommands[selectedIndex])
-    }
+  const openCommand = () => {
+    triggerRef.current?.blur()
+    setIsCommandOpen(true)
   }
 
   return (
@@ -163,47 +120,26 @@ export function WindowTitleBar({ isDark, isSidebarCollapsed, onToggleTheme, onTo
         <div className="relative">
           <Search className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2" size={13} aria-hidden="true" />
           <input
-            ref={inputRef}
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            onFocus={() => setIsOpen(true)}
-            onKeyDown={handleCommandKeyDown}
-            className="h-6 w-full rounded border bg-muted/50 py-0 pl-7 pr-14 text-xs text-foreground outline-none placeholder:text-muted-foreground focus:border-ring focus:ring-1 focus:ring-ring"
+            ref={triggerRef}
+            onClick={openCommand}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault()
+                openCommand()
+              }
+            }}
+            className="h-6 w-full cursor-pointer rounded border bg-muted/50 py-0 pl-7 pr-14 text-xs text-foreground outline-none placeholder:text-muted-foreground focus:border-ring focus:ring-1 focus:ring-ring"
             type="text"
-            role="combobox"
+            readOnly
             aria-label="命令面板"
-            aria-autocomplete="list"
-            aria-controls="mac-command-list"
-            aria-expanded={isOpen}
-            aria-activedescendant={matchingCommands[selectedIndex] ? `mac-command-${matchingCommands[selectedIndex].id}` : undefined}
+            aria-haspopup="dialog"
+            aria-expanded={isCommandOpen}
             placeholder="搜索命令"
           />
           <kbd className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">⌘P</kbd>
         </div>
-        {isOpen && (
-          <div id="mac-command-list" className="mt-1 overflow-hidden rounded-md border bg-popover p-1 shadow-lg" role="listbox" aria-label="可用命令">
-            {matchingCommands.length === 0 ? (
-              <p className="px-2 py-1.5 text-xs text-muted-foreground">未找到命令</p>
-            ) : (
-              matchingCommands.map((command, index) => (
-                <button
-                  key={command.id}
-                  id={`mac-command-${command.id}`}
-                  type="button"
-                  className={`flex h-7 w-full items-center rounded px-2 text-left text-xs ${index === selectedIndex ? 'bg-accent text-accent-foreground' : 'text-popover-foreground hover:bg-accent'}`}
-                  role="option"
-                  aria-selected={index === selectedIndex}
-                  onMouseDown={(event) => event.preventDefault()}
-                  onClick={() => executeCommand(command)}
-                >
-                  {command.label}
-                  <CornerDownLeft className="ml-auto text-muted-foreground" size={12} aria-hidden="true" />
-                </button>
-              ))
-            )}
-          </div>
-        )}
       </div>
+      <Command items={commands} open={isCommandOpen} onOpenChange={setIsCommandOpen} />
     </header>
   )
 }
