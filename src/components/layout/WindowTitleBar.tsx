@@ -1,8 +1,10 @@
-import { Braces, Maximize2, Minus, Search, X } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { Braces, ListTodo, Maximize2, Minus, Moon, PanelLeftClose, PanelLeftOpen, ScrollText, Search, Sun, X } from 'lucide-react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router'
+import { Button } from '@/components/ui/button'
 import { Tooltip } from '@/components/ui/tooltip'
-import { Command, type CommandItem } from '@/components/ui/command'
+import { Kbd } from '@/components/ui/kbd'
+import type { MacCommandAction } from './MacCommandDialog'
 
 type WindowState = {
   isFullscreen: boolean
@@ -19,20 +21,30 @@ const initialWindowState: WindowState = {
   isFullscreen: false,
 }
 
+const MacCommandDialog = lazy(async () => {
+  const module = await import('./MacCommandDialog')
+  return { default: module.MacCommandDialog }
+})
+
 export function WindowTitleBar({ isDark, isSidebarCollapsed, onToggleTheme, onToggleSidebar }: WindowTitleBarProps) {
   const navigate = useNavigate()
-  const triggerRef = useRef<HTMLInputElement>(null)
   const [windowState, setWindowState] = useState(initialWindowState)
   const [isCommandOpen, setIsCommandOpen] = useState(false)
   const controls = window.electronAPI?.windowControls
   const isMac = window.electronAPI?.platform === 'darwin'
+  const runCommand = (action: () => void) => () => {
+    action()
+    setIsCommandOpen(false)
+  }
 
-  const commands: CommandItem[] = [
-    { id: 'json-tools', label: '打开 JSON Tools', keywords: 'json 格式化 校验', onSelect: () => navigate('/json-tools') },
-    { id: 'log-viewer', label: '打开 Log Viewer', keywords: '日志 请求 响应', onSelect: () => navigate('/log-viewer') },
-    { id: 'todos', label: '打开代办任务', keywords: '任务 todo 待办', onSelect: () => navigate('/todos') },
-    { id: 'theme', label: isDark ? '切换为浅色模式' : '切换为深色模式', keywords: '主题 外观 dark light', onSelect: onToggleTheme },
-    { id: 'sidebar', label: isSidebarCollapsed ? '展开功能导航' : '收起功能导航', keywords: '侧栏 导航', onSelect: onToggleSidebar },
+  const toolCommands: MacCommandAction[] = [
+    { id: 'json-tools', label: '打开 JSON Tools', keywords: ['json', '格式化', '校验'], icon: Braces, onSelect: runCommand(() => navigate('/json-tools')) },
+    { id: 'log-viewer', label: '打开 Log Viewer', keywords: ['日志', '请求', '响应'], icon: ScrollText, onSelect: runCommand(() => navigate('/log-viewer')) },
+    { id: 'todos', label: '打开代办任务', keywords: ['任务', 'todo', '待办'], icon: ListTodo, onSelect: runCommand(() => navigate('/todos')) },
+  ]
+  const appearanceCommands: MacCommandAction[] = [
+    { id: 'theme', label: isDark ? '切换为浅色模式' : '切换为深色模式', keywords: ['主题', '外观', 'dark', 'light'], icon: isDark ? Sun : Moon, onSelect: runCommand(onToggleTheme) },
+    { id: 'sidebar', label: isSidebarCollapsed ? '展开功能导航' : '收起功能导航', keywords: ['侧栏', '导航'], icon: isSidebarCollapsed ? PanelLeftOpen : PanelLeftClose, onSelect: runCommand(onToggleSidebar) },
   ]
 
   useEffect(() => {
@@ -73,7 +85,6 @@ export function WindowTitleBar({ isDark, isSidebarCollapsed, onToggleTheme, onTo
   if (!isMac || !controls || windowState.isFullscreen) return null
 
   const openCommand = () => {
-    triggerRef.current?.blur()
     setIsCommandOpen(true)
   }
 
@@ -117,29 +128,30 @@ export function WindowTitleBar({ isDark, isSidebarCollapsed, onToggleTheme, onTo
       </div>
 
       <div className="mac-command-panel absolute left-1/2 top-1/2 z-10 w-[min(30rem,48vw)] -translate-x-1/2 -translate-y-1/2">
-        <div className="relative">
-          <Search className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2" size={13} aria-hidden="true" />
-          <input
-            ref={triggerRef}
-            onClick={openCommand}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter' || event.key === ' ') {
-                event.preventDefault()
-                openCommand()
-              }
-            }}
-            className="h-6 w-full cursor-pointer rounded border bg-muted/50 py-0 pl-7 pr-14 text-xs text-foreground outline-none placeholder:text-muted-foreground focus:border-ring focus:ring-1 focus:ring-ring"
-            type="text"
-            readOnly
-            aria-label="命令面板"
-            aria-haspopup="dialog"
-            aria-expanded={isCommandOpen}
-            placeholder="搜索命令"
-          />
-          <kbd className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">⌘P</kbd>
-        </div>
+        <Button
+          type="button"
+          variant="outline"
+          className="h-7 w-full justify-start bg-muted/50 px-2 text-xs font-normal text-muted-foreground"
+          aria-label="命令面板"
+          aria-haspopup="dialog"
+          aria-expanded={isCommandOpen}
+          onClick={openCommand}
+        >
+          <Search size={13} aria-hidden="true" />
+          <span>搜索命令...</span>
+          <Kbd className="ml-auto h-4 border-0 bg-transparent px-0 text-[10px]">⌘P</Kbd>
+        </Button>
       </div>
-      <Command items={commands} open={isCommandOpen} onOpenChange={setIsCommandOpen} />
+      {isCommandOpen && (
+        <Suspense fallback={null}>
+          <MacCommandDialog
+            appearanceCommands={appearanceCommands}
+            onOpenChange={setIsCommandOpen}
+            open={isCommandOpen}
+            toolCommands={toolCommands}
+          />
+        </Suspense>
+      )}
     </header>
   )
 }
