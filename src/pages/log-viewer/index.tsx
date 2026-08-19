@@ -50,7 +50,7 @@ function LogTabBar({ importFiles }: { importFiles: (files: File[]) => Promise<vo
           <section key={group.id} aria-label={group.name}>
             <ContextMenu>
               <ContextMenuTrigger className="group flex h-7 w-full min-w-0 items-center gap-1 rounded-sm px-1 text-muted-foreground hover:bg-background/60 hover:text-foreground">
-                <button type="button" className="flex h-full min-w-0 flex-1 items-center gap-1.5 px-1 text-left text-[11px]" aria-expanded={isExpanded(group.id)} aria-label={`${isExpanded(group.id) ? '收起' : '展开'} ${group.name}`} title={group.name} onClick={() => toggleGroup(group.id)}>{isExpanded(group.id) ? <ChevronDown size={12} /> : <ChevronRight size={12} />}<FileJson size={14} /><span className="min-w-0 flex-1 truncate">{group.name}</span><span className="font-mono">{group.logs.length}</span></button>
+                <Tooltip content={group.name}><button type="button" className="flex h-full min-w-0 flex-1 items-center gap-1.5 px-1 text-left text-[11px]" aria-expanded={isExpanded(group.id)} aria-label={`${isExpanded(group.id) ? '收起' : '展开'} ${group.name}`} onClick={() => toggleGroup(group.id)}>{isExpanded(group.id) ? <ChevronDown size={12} /> : <ChevronRight size={12} />}<FileJson size={14} /><span className="min-w-0 flex-1 truncate">{group.name}</span><span className="font-mono">{group.logs.length}</span></button></Tooltip>
                 <Tooltip content="删除日志文件"><Button type="button" variant="ghost" size="icon-sm" aria-label={`删除 ${group.name}`} onClick={() => removeLogGroup(group.id)}><Trash2 size={14} /></Button></Tooltip>
               </ContextMenuTrigger>
               <ContextMenuContent>
