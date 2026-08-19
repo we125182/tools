@@ -24,6 +24,38 @@ describe('log viewer Zustand store', () => {
     expect(getActiveLog(state.groups, state.activeId)?.name).toBe('settle')
   })
 
+  it('removes a log file and selects a remaining request when needed', () => {
+    const store = useLogViewerStore.getState()
+    const firstGroup = store.addLogGroup('first.log.json', fixture)
+    const secondGroup = store.addLogGroup('second.log.json', fixture.slice(1))
+
+    store.removeLogGroup(firstGroup.id)
+
+    const state = useLogViewerStore.getState()
+    expect(state.groups).toEqual([secondGroup])
+    expect(state.activeId).toBe(secondGroup.logs[0]?.id)
+  })
+
+  it('preserves the active request when removing another log file', () => {
+    const store = useLogViewerStore.getState()
+    const firstGroup = store.addLogGroup('first.log.json', fixture)
+    const secondGroup = store.addLogGroup('second.log.json', fixture.slice(1))
+    store.setActive(secondGroup.logs[0]!.id)
+
+    store.removeLogGroup(firstGroup.id)
+
+    expect(useLogViewerStore.getState().activeId).toBe(secondGroup.logs[0]?.id)
+  })
+
+  it('clears the active request when removing the last log file', () => {
+    const store = useLogViewerStore.getState()
+    const group = store.addLogGroup('only.log.json', fixture)
+
+    store.removeLogGroup(group.id)
+
+    expect(useLogViewerStore.getState()).toMatchObject({ groups: [], activeId: null })
+  })
+
   it('rejects non-array log files', () => {
     expect(() => normalizeLogEntries({ logs: fixture })).toThrow('日志文件必须是一个 JSON 数组')
   })

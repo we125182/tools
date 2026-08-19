@@ -24,6 +24,7 @@ export interface LogViewerStore {
   groups: LogFileGroup[]
   activeId: string | null
   addLogGroup: (name: string, value: unknown) => LogFileGroup
+  removeLogGroup: (id: string) => void
   setLogs: (value: unknown) => void
   setActive: (id: string) => void
   clearLogs: () => void
@@ -80,6 +81,16 @@ export const useLogViewerStore = create<LogViewerStore>((set, get) => ({
     }))
     return group
   },
+  removeLogGroup: (id) => set((state) => {
+    const removedGroup = state.groups.find((group) => group.id === id)
+    if (!removedGroup) return state
+    const groups = state.groups.filter((group) => group.id !== id)
+    const removedActiveLog = removedGroup.logs.some((log) => log.id === state.activeId)
+    return {
+      groups,
+      activeId: removedActiveLog ? getLogs(groups)[0]?.id ?? null : state.activeId,
+    }
+  }),
   setLogs: (value) => {
     set({ groups: [], activeId: null })
     get().addLogGroup('未命名日志文件', value)

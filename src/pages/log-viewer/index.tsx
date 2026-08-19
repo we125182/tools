@@ -2,6 +2,7 @@ import { ChevronDown, ChevronRight, Clock3, FileJson, FileUp, Link, Trash2, Uplo
 import { useEffect, useMemo, useRef, useState, type DragEvent } from 'react'
 import { JsonTree, type JsonTreeController } from '@/components/json-tree/JsonTree'
 import { Button } from '@/components/ui/button'
+import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from '@/components/ui/context-menu'
 import { Tooltip } from '@/components/ui/tooltip'
 import { pathKey } from '@/lib/jsonc'
 import { getActiveLog, getLogs, useLogViewerStore } from '@/stores/log-viewer'
@@ -29,7 +30,7 @@ function PayloadTree({ value }: { value: unknown }) {
 }
 
 function LogTabBar({ importFiles }: { importFiles: (files: File[]) => Promise<void> }) {
-  const { groups, activeId, setActive, clearLogs } = useLogViewerStore()
+  const { groups, activeId, setActive, clearLogs, removeLogGroup } = useLogViewerStore()
   const [collapsedGroupIds, setCollapsedGroupIds] = useState<Set<string>>(() => new Set())
   const fileInput = useRef<HTMLInputElement>(null)
   const logs = getLogs(groups)
@@ -47,7 +48,15 @@ function LogTabBar({ importFiles }: { importFiles: (files: File[]) => Promise<vo
       <div className="min-h-0 flex-1 space-y-3 overflow-y-auto">
         {groups.map((group) => (
           <section key={group.id} aria-label={group.name}>
-            <button type="button" className="flex h-7 w-full min-w-0 items-center gap-1.5 rounded-sm px-2 text-left text-[11px] text-muted-foreground hover:bg-background/60 hover:text-foreground" aria-expanded={isExpanded(group.id)} aria-label={`${isExpanded(group.id) ? '收起' : '展开'} ${group.name}`} title={group.name} onClick={() => toggleGroup(group.id)}>{isExpanded(group.id) ? <ChevronDown size={12} /> : <ChevronRight size={12} />}<FileJson size={14} /><span className="min-w-0 flex-1 truncate">{group.name}</span><span className="font-mono">{group.logs.length}</span></button>
+            <ContextMenu>
+              <ContextMenuTrigger className="group flex h-7 w-full min-w-0 items-center gap-1 rounded-sm px-1 text-muted-foreground hover:bg-background/60 hover:text-foreground">
+                <button type="button" className="flex h-full min-w-0 flex-1 items-center gap-1.5 px-1 text-left text-[11px]" aria-expanded={isExpanded(group.id)} aria-label={`${isExpanded(group.id) ? '收起' : '展开'} ${group.name}`} title={group.name} onClick={() => toggleGroup(group.id)}>{isExpanded(group.id) ? <ChevronDown size={12} /> : <ChevronRight size={12} />}<FileJson size={14} /><span className="min-w-0 flex-1 truncate">{group.name}</span><span className="font-mono">{group.logs.length}</span></button>
+                <Tooltip content="删除日志文件"><Button type="button" variant="ghost" size="icon-sm" aria-label={`删除 ${group.name}`} onClick={() => removeLogGroup(group.id)}><Trash2 size={14} /></Button></Tooltip>
+              </ContextMenuTrigger>
+              <ContextMenuContent>
+                <ContextMenuItem className="text-destructive data-highlighted:bg-destructive data-highlighted:text-destructive-foreground" onClick={() => removeLogGroup(group.id)}><Trash2 size={14} />删除日志文件</ContextMenuItem>
+              </ContextMenuContent>
+            </ContextMenu>
             {isExpanded(group.id) && <div className="space-y-1">{group.logs.map((log) => <button key={log.id} type="button" className={`flex h-9 w-full items-center rounded-md px-2 text-left text-xs ${activeId === log.id ? 'bg-background text-foreground shadow-xs' : 'text-muted-foreground hover:bg-background/60 hover:text-foreground'}`} aria-current={activeId === log.id ? 'page' : undefined} title={log.url} onClick={() => setActive(log.id)}><span className="truncate">{log.name}</span></button>)}</div>}
           </section>
         ))}
