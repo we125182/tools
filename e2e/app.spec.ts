@@ -68,3 +68,16 @@ test('switches JSON key sorting from the hover icon control', async ({ page }) =
   await sortControl.getByRole('button', { name: '按键名降序' }).click()
   await expect(sortControl.locator('button[aria-pressed="true"]')).toHaveAccessibleName('按键名降序')
 })
+
+test('deletes all JSON tabs and leaves a fresh blank tab', async ({ page }) => {
+  await page.goto('/json-tools')
+  await page.locator('textarea').fill('{"first":true}')
+  await page.getByRole('button', { name: '新建空白 Tab' }).click()
+  await page.locator('textarea').fill('{"second":true}')
+
+  await page.getByRole('button', { name: '删除全部 Tabs' }).click()
+
+  await expect(page.getByLabel('JSON 标签').getByText('Tab 1', { exact: true })).toBeVisible()
+  await expect(page.getByLabel('JSON 标签').getByText('Tab 2', { exact: true })).toHaveCount(0)
+  await expect(page.locator('textarea')).toHaveValue('')
+})

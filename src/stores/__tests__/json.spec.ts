@@ -60,4 +60,25 @@ describe('JSON Zustand store', () => {
     expect(next.sortMode).toBe('desc')
     expect(next.parsed).toEqual({ name: 'Codex' })
   })
+
+  it('closes all tabs and keeps a fresh blank tab active', () => {
+    const store = useJsonStore.getState()
+    store.setInput('{"current":true}')
+    store.setQuery('current')
+    store.setSortMode('desc')
+    store.addTab()
+    store.setInput('{"second":true}')
+
+    store.closeAllTabs()
+
+    const next = useJsonStore.getState()
+    expect(next.tabs).toHaveLength(1)
+    expect(getActiveTab(next)).toMatchObject({ name: 'Tab 1', input: '', query: '', sortMode: 'asc' })
+    expect(next.activeId).toBe(next.tabs[0]!.id)
+    expect(next.hasParsed).toBe(false)
+    expect(next.query).toBe('')
+    expect(next.sortMode).toBe('asc')
+    expect(JSON.parse(localStorage.getItem('jt:tabs') ?? '[]')).toEqual(next.tabs)
+    expect(localStorage.getItem('jt:activeId')).toBe(next.activeId)
+  })
 })

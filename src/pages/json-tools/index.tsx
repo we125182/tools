@@ -165,6 +165,11 @@ export function JsonToolPage() {
               ))}
               <Button type="button" variant="secondary" size="icon" className="w-full text-muted-foreground" aria-label="新建空白 Tab" onClick={store.addTab}><Plus size={16} /></Button>
             </div>
+            <div className="mt-2 border-t pt-2">
+              <Tooltip content="删除全部 Tabs" side="right">
+                <Button type="button" variant="ghost" size="icon" className="w-full text-muted-foreground hover:text-destructive" aria-label="删除全部 Tabs" onClick={store.closeAllTabs}><Trash2 size={16} /></Button>
+              </Tooltip>
+            </div>
           </aside>
           <div className="flex min-w-0 flex-1 flex-col">
             <div className="flex items-center gap-2 border-b px-3 py-2">

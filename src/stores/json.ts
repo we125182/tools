@@ -45,6 +45,7 @@ export interface JsonStore {
   setActive: (id: string) => void
   addTab: () => void
   closeTab: (id: string) => void
+  closeAllTabs: () => void
   duplicateTab: (id: string) => void
   renameTab: (id: string, name: string) => void
   reparse: () => void
@@ -222,6 +223,13 @@ export const useJsonStore = create<JsonStore>((set, get) => ({
     set({ tabs, activeId, query: nextTab.query, sortMode: nextTab.sortMode, parsed: null, errors: [], hasParsed: false, nodeCount: 0, results: [], matchIndex: -1, expandMap: new Map() })
     persist(tabs, activeId, state.indentSize)
     if (state.activeId === id && nextTab.input.trim()) get().format()
+  },
+  closeAllTabs: () => {
+    const state = get()
+    const tab = createTab(uid(), 'Tab 1')
+    const tabs = [tab]
+    set({ tabs, activeId: tab.id, query: '', sortMode: 'asc', parsed: null, errors: [], hasParsed: false, nodeCount: 0, results: [], matchIndex: -1, expandMap: new Map() })
+    persist(tabs, tab.id, state.indentSize)
   },
   duplicateTab: (id) => {
     const state = get()
