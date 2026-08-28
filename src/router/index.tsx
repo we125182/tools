@@ -3,6 +3,7 @@ import { AppShell } from '@/components/layout/AppShell'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { JsonToolPage } from '@/pages/json-tools'
 import { LogViewerPage } from '@/pages/log-viewer'
+import { MarkdownEditorPage } from '@/pages/markdown'
 import { QuickTodoPage, TodoPage } from '@/pages/todos'
 
 function RoutedApp() {
@@ -14,6 +15,7 @@ function RoutedApp() {
     <Routes>
       <Route path="/json-tools" element={<JsonToolPage />} />
       <Route path="/log-viewer" element={<LogViewerPage />} />
+      <Route path="/markdown" element={<MarkdownEditorPage />} />
       <Route path="/todos" element={<TodoPage />} />
       <Route path="*" element={<Navigate to="/json-tools" replace />} />
     </Routes>

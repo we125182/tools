@@ -1,4 +1,4 @@
-import { Braces, ListTodo, Moon, PanelLeftClose, PanelLeftOpen, ScrollText, Sun } from 'lucide-react'
+import { Braces, FilePenLine, ListTodo, Moon, PanelLeftClose, PanelLeftOpen, ScrollText, Sun } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
 import { NavLink, useLocation } from 'react-router'
 import { Button } from '@/components/ui/button'
@@ -6,17 +6,19 @@ import { Tooltip } from '@/components/ui/tooltip'
 import { useJsonStore } from '@/stores/json'
 import { WindowTitleBar } from './WindowTitleBar'
 
-type Feature = 'json-tools' | 'log-viewer' | 'todos'
+type Feature = 'json-tools' | 'log-viewer' | 'markdown' | 'todos'
 
 const features: Array<{ feature: Feature; label: string; path: string }> = [
   { feature: 'json-tools', label: 'JSON Tools', path: '/json-tools' },
   { feature: 'log-viewer', label: 'Log Viewer', path: '/log-viewer' },
+  { feature: 'markdown', label: 'Markdown 编辑器', path: '/markdown' },
   { feature: 'todos', label: '代办任务', path: '/todos' },
 ]
 
 function FeatureIcon({ feature }: { feature: Feature }) {
   if (feature === 'json-tools') return <Braces size={16} />
   if (feature === 'log-viewer') return <ScrollText size={16} />
+  if (feature === 'markdown') return <FilePenLine size={16} />
   return <ListTodo size={16} />
 }
 
@@ -26,7 +28,13 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [collapsed, setCollapsed] = useState(true)
   const [isDark, setIsDark] = useState(() => localStorage.getItem('jt:theme') === 'true')
   const reparse = useJsonStore((state) => state.reparse)
-  const activeFeature: Feature = location.pathname.startsWith('/log-viewer') ? 'log-viewer' : location.pathname.startsWith('/todos') ? 'todos' : 'json-tools'
+  const activeFeature: Feature = location.pathname.startsWith('/log-viewer')
+    ? 'log-viewer'
+    : location.pathname.startsWith('/markdown')
+      ? 'markdown'
+      : location.pathname.startsWith('/todos')
+        ? 'todos'
+        : 'json-tools'
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', isDark)
@@ -37,8 +45,13 @@ export function AppShell({ children }: { children: ReactNode }) {
     reparse()
   }, [reparse])
 
-  const title = activeFeature === 'json-tools' ? 'JSON Tools' : activeFeature === 'log-viewer' ? 'Log Viewer' : '代办任务'
-  const subtitle = activeFeature === 'json-tools' ? '校验 · 格式化 · 浏览' : activeFeature === 'log-viewer' ? '请求 · 响应 · JSON 浏览' : '任务 · 截止时间 · 提醒'
+  const featureCopy: Record<Feature, { subtitle: string; title: string }> = {
+    'json-tools': { title: 'JSON Tools', subtitle: '校验 · 格式化 · 浏览' },
+    'log-viewer': { title: 'Log Viewer', subtitle: '请求 · 响应 · JSON 浏览' },
+    markdown: { title: 'Markdown 编辑器', subtitle: '写作 · 排版 · 导出' },
+    todos: { title: '代办任务', subtitle: '任务 · 截止时间 · 提醒' },
+  }
+  const { title, subtitle } = featureCopy[activeFeature]
 
   return (
     <div className="flex h-screen w-screen flex-col overflow-hidden bg-background text-foreground">

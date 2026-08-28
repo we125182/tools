@@ -1,4 +1,4 @@
-import { Braces, ListTodo, Maximize2, Minus, Moon, PanelLeftClose, PanelLeftOpen, ScrollText, Search, Sun, X } from 'lucide-react'
+import { Braces, FilePenLine, ListTodo, Maximize2, Minus, Moon, PanelLeftClose, PanelLeftOpen, ScrollText, Search, Sun, X } from 'lucide-react'
 import { lazy, Suspense, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { Button } from '@/components/ui/button'
@@ -40,6 +40,7 @@ export function WindowTitleBar({ isDark, isSidebarCollapsed, onToggleTheme, onTo
   const toolCommands: MacCommandAction[] = [
     { id: 'json-tools', label: '打开 JSON Tools', keywords: ['json', '格式化', '校验'], icon: Braces, onSelect: runCommand(() => navigate('/json-tools')) },
     { id: 'log-viewer', label: '打开 Log Viewer', keywords: ['日志', '请求', '响应'], icon: ScrollText, onSelect: runCommand(() => navigate('/log-viewer')) },
+    { id: 'markdown', label: '打开 Markdown 编辑器', keywords: ['markdown', '编辑器', '文档', '写作'], icon: FilePenLine, onSelect: runCommand(() => navigate('/markdown')) },
     { id: 'todos', label: '打开代办任务', keywords: ['任务', 'todo', '待办'], icon: ListTodo, onSelect: runCommand(() => navigate('/todos')) },
   ]
   const appearanceCommands: MacCommandAction[] = [
