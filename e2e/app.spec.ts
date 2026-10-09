@@ -48,6 +48,35 @@ test('shows an import success toast that closes after three seconds', async ({ p
   await expect(toast).toBeHidden({ timeout: 3500 })
 })
 
+test('resizes the log request panel within 200px and 400px', async ({ page }) => {
+  await page.goto('/log-viewer')
+  const requestPanel = page.getByRole('complementary', { name: '请求日志', exact: true })
+  const resizeHandle = page.getByRole('separator', { name: '调整请求日志宽度' })
+
+  await expect(requestPanel).toHaveCSS('width', '240px')
+
+  const getRequestPanelWidth = async () => {
+    const box = await requestPanel.boundingBox()
+    return box ? Math.round(box.width) : 0
+  }
+  const dragBy = async (deltaX: number) => {
+    const box = await resizeHandle.boundingBox()
+    if (!box) throw new Error('未找到日志宽度调整手柄')
+    const x = box.x + box.width / 2
+    const y = box.y + box.height / 2
+    await page.mouse.move(x, y)
+    await page.mouse.down()
+    await page.mouse.move(x + deltaX, y, { steps: 5 })
+    await page.mouse.up()
+  }
+
+  await dragBy(500)
+  await expect.poll(getRequestPanelWidth).toBe(400)
+
+  await dragBy(-500)
+  await expect.poll(getRequestPanelWidth).toBe(200)
+})
+
 test('switches JSON key sorting from the hover icon control', async ({ page }) => {
   await page.goto('/')
   await page.locator('textarea').fill('{"z": 1, "a": 2}')

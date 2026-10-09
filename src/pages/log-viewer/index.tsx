@@ -1,11 +1,19 @@
 import { ChevronDown, ChevronRight, Clock3, FileJson, FileUp, Link, Trash2, Upload, X } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState, type DragEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type DragEvent, type KeyboardEvent, type PointerEvent } from 'react'
 import { JsonTree, type JsonTreeController } from '@/components/json-tree/JsonTree'
 import { Button } from '@/components/ui/button'
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from '@/components/ui/context-menu'
 import { Tooltip } from '@/components/ui/tooltip'
 import { pathKey } from '@/lib/jsonc'
 import { getActiveLog, getLogs, useLogViewerStore } from '@/stores/log-viewer'
+
+const LOG_PANEL_MIN_WIDTH = 200
+const LOG_PANEL_MAX_WIDTH = 400
+const LOG_PANEL_DEFAULT_WIDTH = 240
+
+function clampLogPanelWidth(width: number) {
+  return Math.min(LOG_PANEL_MAX_WIDTH, Math.max(LOG_PANEL_MIN_WIDTH, width))
+}
 
 function PayloadTree({ value }: { value: unknown }) {
   const [expandMap, setExpandMap] = useState<Map<string, boolean>>(() => new Map())
@@ -29,7 +37,7 @@ function PayloadTree({ value }: { value: unknown }) {
   return <div className="min-h-0 flex-1 overflow-auto p-3"><JsonTree value={value} hasValue controller={controller} /></div>
 }
 
-function LogTabBar({ importFiles }: { importFiles: (files: File[]) => Promise<void> }) {
+function LogTabBar({ importFiles, width }: { importFiles: (files: File[]) => Promise<void>; width: number }) {
   const { groups, activeId, setActive, clearLogs, removeLogGroup } = useLogViewerStore()
   const [collapsedGroupIds, setCollapsedGroupIds] = useState<Set<string>>(() => new Set())
   const fileInput = useRef<HTMLInputElement>(null)
@@ -43,7 +51,7 @@ function LogTabBar({ importFiles }: { importFiles: (files: File[]) => Promise<vo
   })
 
   return (
-    <aside className="flex h-full w-28 shrink-0 flex-col border-r bg-muted/30 p-2 sm:w-44" aria-label="请求日志">
+    <aside className="flex h-full shrink-0 flex-col border-r bg-muted/30 p-2" style={{ width }} aria-label="请求日志">
       <div className="mb-2 flex h-8 items-center px-2"><span className="text-xs font-medium text-muted-foreground">请求日志</span><span className="ml-auto font-mono text-[11px] text-muted-foreground">{logs.length}</span></div>
       <div className="min-h-0 flex-1 space-y-3 overflow-y-auto">
         {groups.map((group) => (
@@ -76,6 +84,9 @@ export function LogViewerPage() {
   const activeLog = getActiveLog(groups, activeId)
   const [isDraggingFiles, setIsDraggingFiles] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
+  const [logPanelWidth, setLogPanelWidth] = useState(LOG_PANEL_DEFAULT_WIDTH)
+  const [isResizing, setIsResizing] = useState(false)
+  const resizeState = useRef<{ pointerId: number; startX: number; startWidth: number } | null>(null)
   useEffect(() => {
     if (!notice) return
     const timeout = window.setTimeout(() => setNotice(null), 3000)
@@ -100,9 +111,67 @@ export function LogViewerPage() {
   const duration = activeLog?.duration === undefined || activeLog?.duration === '' ? '耗时未知' : String(activeLog.duration)
   const requestTime = activeLog?.reqTime === undefined || activeLog?.reqTime === '' ? null : String(activeLog.reqTime)
 
+  useEffect(() => {
+    if (!isResizing) return
+    const previousCursor = document.body.style.cursor
+    const previousUserSelect = document.body.style.userSelect
+    document.body.style.cursor = 'col-resize'
+    document.body.style.userSelect = 'none'
+    return () => {
+      document.body.style.cursor = previousCursor
+      document.body.style.userSelect = previousUserSelect
+    }
+  }, [isResizing])
+
+  const startResize = (event: PointerEvent<HTMLDivElement>) => {
+    if (event.button !== 0) return
+    event.preventDefault()
+    resizeState.current = { pointerId: event.pointerId, startX: event.clientX, startWidth: logPanelWidth }
+    setIsResizing(true)
+    event.currentTarget.setPointerCapture(event.pointerId)
+  }
+
+  const resize = (event: PointerEvent<HTMLDivElement>) => {
+    const state = resizeState.current
+    if (!state || state.pointerId !== event.pointerId) return
+    setLogPanelWidth(clampLogPanelWidth(state.startWidth + event.clientX - state.startX))
+  }
+
+  const stopResize = (event: PointerEvent<HTMLDivElement>) => {
+    const state = resizeState.current
+    if (!state || state.pointerId !== event.pointerId) return
+    resizeState.current = null
+    setIsResizing(false)
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId)
+  }
+
+  const resizeWithKeyboard = (event: KeyboardEvent<HTMLDivElement>) => {
+    const delta = event.key === 'ArrowLeft' ? -10 : event.key === 'ArrowRight' ? 10 : null
+    if (delta === null) return
+    event.preventDefault()
+    setLogPanelWidth((width) => clampLogPanelWidth(width + delta))
+  }
+
   return (
-    <main className="relative flex min-h-0 flex-1" onDragEnter={(event) => { event.preventDefault(); if (containsFiles(event)) setIsDraggingFiles(true) }} onDragOver={(event) => event.preventDefault()} onDragLeave={(event) => { if (event.currentTarget === event.target) setIsDraggingFiles(false) }} onDrop={(event) => { event.preventDefault(); setIsDraggingFiles(false); void importFiles(Array.from(event.dataTransfer.files)) }}>
-      <LogTabBar importFiles={importFiles} />
+    <main className={`relative flex min-h-0 flex-1 ${isResizing ? 'cursor-col-resize select-none' : ''}`} onDragEnter={(event) => { event.preventDefault(); if (containsFiles(event)) setIsDraggingFiles(true) }} onDragOver={(event) => event.preventDefault()} onDragLeave={(event) => { if (event.currentTarget === event.target) setIsDraggingFiles(false) }} onDrop={(event) => { event.preventDefault(); setIsDraggingFiles(false); void importFiles(Array.from(event.dataTransfer.files)) }}>
+      <LogTabBar importFiles={importFiles} width={logPanelWidth} />
+      <div
+        role="separator"
+        aria-label="调整请求日志宽度"
+        aria-orientation="vertical"
+        aria-valuemin={LOG_PANEL_MIN_WIDTH}
+        aria-valuemax={LOG_PANEL_MAX_WIDTH}
+        aria-valuenow={logPanelWidth}
+        tabIndex={0}
+        className="group relative z-10 w-1 shrink-0 cursor-col-resize touch-none outline-none"
+        onPointerDown={startResize}
+        onPointerMove={resize}
+        onPointerUp={stopResize}
+        onPointerCancel={stopResize}
+        onKeyDown={resizeWithKeyboard}
+      >
+        <span className={`absolute inset-y-0 left-1/2 w-px -translate-x-1/2 transition-colors ${isResizing ? 'bg-primary' : 'bg-transparent group-hover:bg-primary/60 group-focus-visible:bg-primary'}`} />
+      </div>
       <section className="flex min-w-0 flex-1 flex-col">
         {activeLog ? <>
           <header className="flex min-h-14 shrink-0 flex-wrap items-center gap-x-4 gap-y-2 border-b px-4 py-2"><div className="flex min-w-0 flex-1 items-center gap-2"><Link className="shrink-0 text-muted-foreground" size={16} /><span className="truncate font-mono text-sm" title={activeLog.url}>{activeLog.url}</span></div><span className="flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground"><Clock3 size={14} />请求耗时 {duration}</span>{requestTime && <span className="flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground"><Clock3 size={14} />请求时间 {requestTime}</span>}</header>
