@@ -15,6 +15,13 @@ const features: Array<{ feature: Feature; label: string; path: string }> = [
   { feature: 'todos', label: '代办任务', path: '/todos' },
 ]
 
+const featureTitles: Record<Feature, string> = {
+  'json-tools': 'JSON Tools',
+  'log-viewer': 'Log Viewer',
+  markdown: 'Markdown 编辑器',
+  todos: '代办任务',
+}
+
 function FeatureIcon({ feature }: { feature: Feature }) {
   if (feature === 'json-tools') return <Braces size={16} />
   if (feature === 'log-viewer') return <ScrollText size={16} />
@@ -24,17 +31,10 @@ function FeatureIcon({ feature }: { feature: Feature }) {
 
 export function AppShell({ children }: { children: ReactNode }) {
   const location = useLocation()
-  const isElectron = Boolean(window.electronAPI)
   const [collapsed, setCollapsed] = useState(true)
   const [isDark, setIsDark] = useState(() => localStorage.getItem('jt:theme') === 'true')
   const reparse = useJsonStore((state) => state.reparse)
-  const activeFeature: Feature = location.pathname.startsWith('/log-viewer')
-    ? 'log-viewer'
-    : location.pathname.startsWith('/markdown')
-      ? 'markdown'
-      : location.pathname.startsWith('/todos')
-        ? 'todos'
-        : 'json-tools'
+  const activeFeature = features.find((item) => location.pathname.startsWith(item.path))?.feature ?? 'json-tools'
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', isDark)
@@ -44,14 +44,6 @@ export function AppShell({ children }: { children: ReactNode }) {
   useEffect(() => {
     reparse()
   }, [reparse])
-
-  const featureCopy: Record<Feature, { subtitle: string; title: string }> = {
-    'json-tools': { title: 'JSON Tools', subtitle: '校验 · 格式化 · 浏览' },
-    'log-viewer': { title: 'Log Viewer', subtitle: '请求 · 响应 · JSON 浏览' },
-    markdown: { title: 'Markdown 编辑器', subtitle: '写作 · 排版 · 导出' },
-    todos: { title: '代办任务', subtitle: '任务 · 截止时间 · 提醒' },
-  }
-  const { title, subtitle } = featureCopy[activeFeature]
 
   return (
     <div className="flex h-screen w-screen flex-col overflow-hidden bg-background text-foreground">
@@ -99,35 +91,25 @@ export function AppShell({ children }: { children: ReactNode }) {
               return <div key={item.feature}>{collapsed ? <Tooltip content={item.label} side="right">{link}</Tooltip> : link}</div>
             })}
           </nav>
+          <div className="mt-auto shrink-0 pt-2">
+            <Tooltip content={isDark ? '切换为浅色模式' : '切换为深色模式'} side={collapsed ? 'right' : 'top'}>
+              <Button
+                type="button"
+                variant="ghost"
+                className={`h-10 w-full text-muted-foreground ${collapsed ? 'px-0' : 'justify-start px-2'}`}
+                aria-label={isDark ? '切换为浅色模式' : '切换为深色模式'}
+                aria-pressed={isDark}
+                onClick={() => setIsDark((value) => !value)}
+              >
+                {isDark ? <Sun size={16} /> : <Moon size={16} />}
+                {!collapsed && <span>{isDark ? '浅色模式' : '深色模式'}</span>}
+              </Button>
+            </Tooltip>
+          </div>
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col">
-          {!isElectron && (
-            <header className="flex h-14 shrink-0 items-center gap-3 border-b bg-background px-4">
-              <div className="flex items-center gap-2">
-                <div className="flex size-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
-                  <FeatureIcon feature={activeFeature} />
-                </div>
-                <div className="leading-tight">
-                  <h1 className="text-sm font-semibold">{title}</h1>
-                  <p className="text-[11px] text-muted-foreground">{subtitle}</p>
-                </div>
-              </div>
-              <Tooltip content="切换深色模式">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="ml-auto rounded-full text-muted-foreground"
-                  aria-label="切换深色模式"
-                  aria-pressed={isDark}
-                  onClick={() => setIsDark((value) => !value)}
-                >
-                  {isDark ? <Moon size={14} /> : <Sun size={14} />}
-                </Button>
-              </Tooltip>
-            </header>
-          )}
+          <h1 className="sr-only">{featureTitles[activeFeature]}</h1>
           {children}
         </div>
       </div>
